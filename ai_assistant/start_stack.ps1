@@ -1,8 +1,8 @@
 param(
-    [string]$PythonExe = "c:/Users/brahim/OneDrive/Bureau/example erp stage pfe/javaerp/.venv/Scripts/python.exe",
+    [string]$PythonExe = ".\.venv\Scripts\python.exe",
     [string]$LangGraphScript = "ai_assistant/langgraph_skeleton.py",
-    [string]$EndpointsJson = "C:/Users/brahim/OneDrive/Bureau/example erp stage pfe/aierpjava/test/src/main/resources/endpoints.json",
-    [string]$WebApiProjectDir = "C:/Users/brahim/OneDrive/Bureau/stage2026/web/Webservices_webclient/stagepfe26/WebApi",
+    [string]$EndpointsJson = "ai_assistant/data/endpoints.sample.json",
+    [string]$WebApiProjectDir = "C:\stage2026\web\Webservices_webclient\ERPMicroservice_1\WebApi",
     [int]$AssistantPort = 8000,
     [string]$RouterModel = "deepseek-coder:6.7b",
     [string]$AnswerModel = "llama3.2:latest",

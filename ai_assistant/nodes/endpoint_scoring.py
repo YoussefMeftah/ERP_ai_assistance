@@ -1,0 +1,173 @@
+"""Scoring logic for endpoint candidate retrieval."""
+
+from typing import List, Dict, Any
+from utils.text_utils import tokenize, contains_any
+
+
+def is_supported_business_endpoint(endpoint: Dict[str, Any]) -> bool:
+    """Check if endpoint is a business endpoint (not test/auth/debug).
+    
+    Args:
+        endpoint: Endpoint definition
+    
+    Returns:
+        True if endpoint is suitable for business queries
+    """
+    if str(endpoint.get("method", "GET")).upper() != "GET":
+        return False
+    
+    url = str(endpoint.get("url", "")).lower()
+    endpoint_id = str(endpoint.get("id", "")).lower()
+    description = str(endpoint.get("description", "")).lower()
+    tags = " ".join(str(tag) for tag in endpoint.get("tags", [])).lower()
+    endpoint_text = " ".join([url, endpoint_id, description, tags])
+    
+    # Block test/debug endpoints
+    blocked_terms = [
+        "swagger", "openapi", "health", "generate-test", "generatetest",
+        "/test", "testendpoint", "debug", "token", "login", "signin", "auth"
+    ]
+    if contains_any(endpoint_text, blocked_terms):
+        return False
+    
+    # Report endpoints must contain business keywords
+    if "/api/reports/" in url:
+        business_keywords = ["vente", "commande", "client", "fact", "report"]
+        if not contains_any(endpoint_text, business_keywords):
+            return False
+    
+    # Must contain business keywords
+    business_allow_terms = [
+        "getall", "list", "all", "odata", "client", "commande",
+        "vente", "stock", "paiement", "fournisseur", "fact",
+        "article", "report", "stats"
+    ]
+    return contains_any(endpoint_text, business_allow_terms)
+
+
+def compute_endpoint_score(
+    endpoint: Dict[str, Any],
+    q_tokens: set,
+    question: str,
+    intent: str,
+    domain: str,
+) -> int:
+    """Compute relevance score for an endpoint given question.
+    
+    Scoring factors:
+        - Token overlap with question (base score)
+        - Intent match (GET vs AGGREGATE)
+        - Domain role match (commercial, stock, etc.)
+        - URL patterns (getall, list, odata bonus)
+        - Special handling for specific endpoints
+    
+    Args:
+        endpoint: Endpoint definition
+        q_tokens: Tokens from question
+        question: Original question
+        intent: Classified intent
+        domain: Classified domain
+    
+    Returns:
+        Relevance score
+    """
+    ep_keywords = [str(kw) for kw in endpoint.get("keywords", [])]
+    ep_text = " ".join([
+        str(endpoint.get("id", "")),
+        str(endpoint.get("url", "")),
+        str(endpoint.get("description", "")),
+        " ".join(ep_keywords),
+        " ".join(str(tag) for tag in endpoint.get("tags", [])),
+    ]).lower()
+    ep_tokens = set(tokenize(ep_text))
+    
+    # Base score: token overlap
+    overlap = len(q_tokens.intersection(ep_tokens))
+    role_match = endpoint.get("role") == domain
+    intent_match = endpoint.get("intent") == intent
+    
+    score = overlap * 4
+    url = str(endpoint.get("url", "")).lower()
+    
+    # Intent and role bonuses
+    if overlap > 0 and intent_match:
+        score += 2
+    if overlap > 0 and role_match:
+        score += 1
+    
+    # URL pattern bonuses
+    if contains_any(ep_text, ["getall", "list", "odata"]):
+        score += 4
+    if contains_any(url, ["/api/reports/commande_client-report", "/api/statsvente/"]):
+        score += 5
+    
+    # Penalty for debug/test
+    if contains_any(ep_text, ["generate-test", "generatetest", "/test", "debug"]):
+        score -= 20
+    
+    # Sales/statistics specific
+    if contains_any(question, ["vente", "ventes", "statistique", "statistiques", "chiffre", "ca", "rapport"]):
+        if contains_any(ep_text, ["vente", "ventes", "statsvente", "report", "reports", "commande_client", "fact"]):
+            score += 6
+        if contains_any(ep_text, ["client/getallclients", "get_clients", "blclient/getallclients"]):
+            score -= 4
+    
+    # Domain-specific bonuses
+    if contains_any(question, ["client", "clients"]) and contains_any(ep_text, ["client", "clients"]):
+        score += 3
+    if contains_any(question, ["stock", "inventaire"]) and contains_any(ep_text, ["stock", "depot", "article"]):
+        score += 5
+    if contains_any(question, ["paiement", "paiements", "reglement", "règlement"]):
+        if contains_any(ep_text, ["paiement", "payments", "fact"]):
+            score += 5
+    
+    return score
+
+
+def score_endpoints(
+    endpoints: List[Dict[str, Any]],
+    question: str,
+    intent: str,
+    domain: str,
+    apply_business_filter: bool = True,
+) -> List[Dict[str, Any]]:
+    """Score and rank endpoints by relevance to question.
+    
+    Args:
+        endpoints: List of available endpoints
+        question: User question
+        intent: Classified intent
+        domain: Classified domain
+        apply_business_filter: Whether to filter out non-business endpoints
+    
+    Returns:
+        Sorted list of endpoints with scores (highest first)
+    """
+    q_tokens = set(tokenize(question))
+    scored: List[Dict[str, Any]] = []
+    
+    for ep in endpoints:
+        # Apply business filter if requested
+        if apply_business_filter and not is_supported_business_endpoint(ep):
+            continue
+        
+        # Filter by domain for Swagger-generated endpoints
+        if str(ep.get("id", "")).startswith("webapi_get_"):
+            role = ep.get("role", "general")
+            if domain != "general" and role not in {domain, "general"}:
+                continue
+        
+        score = compute_endpoint_score(
+            endpoint=ep,
+            q_tokens=q_tokens,
+            question=question,
+            intent=intent,
+            domain=domain,
+        )
+        
+        if score > 0:
+            scored.append({"score": score, **ep})
+    
+    # Sort by score descending
+    scored.sort(key=lambda x: x["score"], reverse=True)
+    return scored

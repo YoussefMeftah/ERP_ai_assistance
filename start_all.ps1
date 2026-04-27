@@ -1,10 +1,10 @@
 param(
-    [string]$PythonExe = "c:/Users/brahim/OneDrive/Bureau/example erp stage pfe/javaerp/.venv/Scripts/python.exe",
-    [string]$WebApiProjectDir = "C:/Users/brahim/OneDrive/Bureau/stage2026/web/Webservices_webclient/stagepfe26/WebApi",
+    [string]$PythonExe = ".\.venv\Scripts\python.exe",
+    [string]$WebApiProjectDir = "C:\stage2026\web\Webservices_webclient\ERPMicroservice_1\WebApi",
     [string]$FrontendDir = "frontend",
     [int]$AssistantPort = 8000,
-    [switch]$UseOllama = $true,
-    [switch]$AutoPullModels = $true,
+    [switch]$UseOllama,
+    [switch]$AutoPullModels,
     [switch]$DryRun
 )
 
@@ -13,7 +13,7 @@ $ErrorActionPreference = "Stop"
 $rootDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $backendScript = Join-Path $rootDir "ai_assistant/start_stack.ps1"
 $frontendNpm = Join-Path $rootDir $FrontendDir
-$expectedWebApiPort = 5006
+$expectedWebApiPort = 44393
 $expectedAssistantPort = $AssistantPort
 
 function Test-TcpPort {

@@ -1,145 +1,347 @@
-# LangGraph Skeleton (Point 1)
+# ERP AI Assistant - Modular LangGraph Implementation
 
-This folder contains a runnable LangGraph skeleton for the ERP AI assistant.
+A production-grade AI assistant for ERP systems using **LangGraph**, **Ollama (DeepSeek + Llama)**, and intelligent endpoint routing.
 
-## What is implemented
-- Graph structure with main nodes:
-  - classify_question
-  - retrieve_candidate_endpoints
-  - select_endpoint_and_params
-  - call_webapi_stub
-  - evidence_filter
-  - answer_generation
-  - answer_validation
-- Local cache output in `ai_assistant/data/cache/last_api_result.json`
-- Optional Ollama integration for final answer generation
-
-## Run
-From project root:
-
-1. Activate venv
-2. Run:
+## Project Structure
 
 ```
-python ai_assistant/langgraph_skeleton.py
+ai_assistant/
+├── main.py                          # Entry point (HTTP server + CLI)
+├── state.py                         # AssistantState TypedDict definition
+├── config.py                        # Environment configuration & defaults
+├── nodes/                           # Graph node implementations
+│   ├── __init__.py
+│   ├── classify_question.py         # Intent & domain classification
+│   ├── retrieve_candidates.py       # Endpoint loading & semantic scoring
+│   ├── endpoint_scoring.py          # Scoring logic (extracted for reuse)
+│   ├── select_endpoint.py           # DeepSeek routing + score-based fallback
+│   ├── call_webapi.py               # HTTP API execution + caching
+│   ├── evidence_filter.py           # Result filtering + MongoDB staging + Llama filtering
+│   ├── answer_generation.py         # Llama-based answer generation
+│   └── answer_validation.py         # Confidence adjustment
+├── utils/                           # Shared utilities
+│   ├── __init__.py
+│   ├── api_client.py                # Ollama & HTTP clients
+│   ├── text_utils.py                # Text processing, tokenization, domain inference
+│   ├── endpoint_loader.py           # Swagger/JSON/override endpoint loading
+│   ├── data_processing.py           # Filtering, normalization, evidence building
+│   └── mongodb_staging.py           # MongoDB integration for large results
+└── data/
+    ├── endpoints.sample.json        # Static endpoint definitions
+    ├── endpoint_overrides.json      # ID -> URL mapping overrides
+    └── cache/                       # Cached API results
 ```
 
-## Use your real endpoints.json
-Set environment variable before running:
+## Key Features
 
-PowerShell:
+### 1. **Modular Node Architecture**
+- Each graph node in its own file  
+- Clear input/output contracts via `AssistantState`
+- Independent unit testing possible
+
+### 2. **Dual LLM Routing**
+- **DeepSeek (endpoint router)**: Intelligently selects which API to call
+- **Llama (answer generator)**: Converts raw data into human-friendly responses
+- **Fallback mechanism**: Score-based selection if LLM unavailable
+
+### 3. **Advanced Filtering**
+- Limit results to 20 records for evidence
+- **MongoDB staging** for large result sets (>50 records)
+- **Llama-based client-side filtering** for custom conditions ("sales > 100 TND")
+
+### 4. **Flexible Endpoint Discovery**
+- Load from Swagger API (live endpoint discovery)
+- Load from static JSON config (`endpoints.sample.json`)
+- Apply URL overrides (`endpoint_overrides.json`)
+- Automatic domain classification
+
+## Quick Start
+
+### 1. Install & Activate Environment
+
+```powershell
+cd aierplanggraph
+.\.venv\Scripts\Activate.ps1
+```
+
+### 2. Run in CLI Mode
+
+```powershell
+# Default question
+python ai_assistant/main.py
+
+# Custom question
+python ai_assistant/main.py --question "Combien de clients j'ai à Paris ?"
+
 
 ```
-$env:ERP_ENDPOINTS_JSON = "C:/Users/brahim/OneDrive/Bureau/example erp stage pfe/aierpjava/test/src/main/resources/endpoints.json"
-$env:ERP_API_BASE_URL = "http://localhost:5000"
-python ai_assistant/langgraph_skeleton.py
+
+### 3. Run as HTTP Server
+
+```powershell
+# Default: localhost:8000
+python ai_assistant/main.py --serve
+
+# Custom host/port
+python ai_assistant/main.py --serve --host 0.0.0.0 --port 9000
 ```
 
-You can also provide the WebApi project folder and let the script auto-detect URL from `Properties/launchSettings.json`:
+### 4. Make API Requests
 
-```
-$env:ERP_WEBAPI_PROJECT_DIR = "C:/Users/brahim/OneDrive/Bureau/stage2026/web/Webservices_webclient/stagepfe26/WebApi"
-python ai_assistant/langgraph_skeleton.py
-```
-
-If your WebApi uses auth:
-
-```
-$env:ERP_API_BEARER_TOKEN = "your_token_here"
+```bash
+curl -X POST http://localhost:8000/assistant/query \
+  -H "Content-Type: application/json" \
+  -d '{"question": "Quels sont mes clients de Paris ?"}'
 ```
 
-## Enable Ollama for answer generation
+## Configuration
 
-```
-$env:USE_OLLAMA = "1"
+All configuration is environment variable-based. See `config.py` for defaults.
+
+### Essential Variables
+
+```powershell
+# ERP API
+$env:ERP_API_BASE_URL = "https://localhost:44393"
+$env:ERP_API_BEARER_TOKEN = "your_jwt_token"
+
+# Endpoint loading
+$env:ERP_ENDPOINT_SOURCE = "swagger"  # or "file"
+$env:ERP_ENDPOINTS_JSON = "path/to/endpoints.json"
+$env:ERP_ENDPOINT_OVERRIDES_JSON = "path/to/overrides.json"
+$env:ERP_LOAD_SWAGGER_ENDPOINTS = "1"
+
+# LLM Models
+$env:OLLAMA_URL = "http://localhost:11434/api/chat"
 $env:OLLAMA_MODEL_ROUTER = "deepseek-coder:6.7b"
-$env:OLLAMA_MODEL_ANSWER = "llama3.1:8b"
-python ai_assistant/langgraph_skeleton.py
+$env:OLLAMA_MODEL_ANSWER = "llama3.2:latest"
+$env:OLLAMA_TIMEOUT_SECONDS = "180"
+
+# MongoDB (optional, for large result sets)
+$env:MONGODB_URI = "mongodb://localhost:27017"
+$env:MONGODB_DB_NAME = "erp_assistant_staging"
+$env:MONGODB_STAGING_THRESHOLD = "50"
+
+# HTTP Server
+$env:ERP_ASSISTANT_HOST = "127.0.0.1"
+$env:ERP_ASSISTANT_PORT = "8000"
 ```
 
-Keep `USE_OLLAMA=0` (default) if Ollama is not running yet.
-
-## One-command local stack startup
-
-Use the bootstrap script to auto-start dependencies and launch LangGraph:
+## Graph Execution Flow
 
 ```
-./ai_assistant/start_stack.ps1
+START
+  ↓
+[classify_question]
+  • Determine intent (GET, AGGREGATE, FILTER)
+  • Infer business domain (commercial, stock, finance, rh, achat, general)
+  ↓
+[retrieve_candidate_endpoints]
+  • Load endpoints from Swagger/JSON/overrides
+  • Score by semantic similarity to question
+  • Return top 12 candidates
+  ↓
+[select_endpoint_and_params]
+  • Try DeepSeek LLM routing on candidates
+  • Extract parameters from question
+  • Fallback to score-based selection if LLM unavailable
+  ↓
+[call_webapi]
+  • Build URLs with extracted parameters
+  • Execute HTTP requests to ERP API
+  • Normalize responses (handles various formats)
+  • Cache raw result to last_api_result.json
+  ↓
+[evidence_filter]
+  • Load cached API results
+  • Stage to MongoDB if > 50 records
+  • Apply Llama-based client-side filtering (custom conditions)
+  • Limit to 20 records for evidence
+  • Calculate confidence score
+  ↓
+[answer_generation]
+  • Build compact evidence from filtered results
+  • Call Llama with system/user prompts
+  • Fallback to template-based answer
+  ↓
+[answer_validation]
+  • Adjust confidence based on answer quality
+  • Check for negative indicators
+  ↓
+END (return complete state with answer, confidence, errors)
 ```
 
-Start with Ollama + dual models:
+## Node Details
 
-```
-./ai_assistant/start_stack.ps1 -UseOllama -RouterModel "deepseek-coder:6.7b" -AnswerModel "llama3.1:8b"
-```
+### classify_question
+**Input**: User question  
+**Output**: intent, domain
 
-If models are missing, auto-pull them:
+Determines what user wants and which business area it relates to.
 
-```
-./ai_assistant/start_stack.ps1 -UseOllama -AutoPullModels
-```
-
-What it does:
-- Starts Ollama server if needed.
-- Starts WebApi from `ERP_WEBAPI_PROJECT_DIR` if needed.
-- Detects WebApi URLs from `Properties/launchSettings.json`.
-- Sets environment variables and runs LangGraph.
-
-## One command for the full project
-
-From the project root, run:
-
-```
-powershell.exe -ExecutionPolicy Bypass -File .\start_all.ps1
+```python
+# Intent: "GET" (list), "AGGREGATE" (stats), "FILTER" (conditions)
+# Domain: "commercial", "stock", "finance", "rh", "achat", "general"
 ```
 
-Dry run:
+### retrieve_candidate_endpoints
+**Input**: question, intent, domain  
+**Output**: endpoint_candidates (scored)
 
+Loads endpoints and scores by semantic relevance using token overlap + business heuristics.
+
+### select_endpoint_and_params
+**Input**: endpoint_candidates, question  
+**Output**: selected_endpoints, extracted_params
+
+**DeepSeek Router Prompt**:
 ```
-powershell.exe -ExecutionPolicy Bypass -File .\start_all.ps1 -DryRun
+You are the primary endpoint router for an ERP API.
+Choose the exact business GET endpoint that best answers the user question.
+Return strict JSON: {"endpoint_ids": [...], "extracted_params": {...}}
 ```
 
-This launches:
-- Ollama
-- WebApi
-- LangGraph
-- React frontend
+**Fallback**: Score-based selection
 
-## Endpoint overrides (safe correction)
+### call_webapi
+**Input**: selected_endpoints, extracted_params  
+**Output**: api_result_path (cached JSON file)
 
-Use `ai_assistant/data/endpoint_overrides.json` to force exact route mapping by endpoint ID.
+Executes HTTP requests and caches results to `data/cache/last_api_result.json`.
 
-Example:
+### evidence_filter
+**Input**: api_result_path, question  
+**Output**: filtered_result, confidence
 
+**New Features**:
+- **MongoDB Staging**: If result > 50 records, save to temporary collection (auto-expire after 24h)
+- **Llama Client-Side Filtering**: If question contains filter keywords, use Llama to generate filter logic:
+  ```
+  "Montre les clients avec ventes > 100 TND"
+  → Llama generates: record['ventes'] > 100
+  ```
+
+### answer_generation
+**Input**: filtered_result, selected_endpoints, question  
+**Output**: answer
+
+**Llama System Prompt**:
 ```
+You are an ERP support assistant.
+Answer ONLY from provided evidence.
+Summarize information in a business-friendly way.
+```
+
+### answer_validation
+**Input**: answer, filtered_result  
+**Output**: confidence (adjusted)
+
+Heuristics:
+- Negative indicators (could not, unavailable) → confidence ≤ 0.3
+- Good results (count > 0) → confidence ≥ 0.75
+- No results → confidence ≤ 0.4
+
+## Key Improvements Over Legacy `langgraph_skeleton.py`
+
+| Feature | Before | After |
+|---------|--------|-------|
+| **Structure** | 1 monolithic file | Modular nodes + utils |
+| **Endpoint Scoring** | Inline logic | Extracted `endpoint_scoring.py` |
+| **Error Handling** | Basic try/catch | Accumulated error messages |
+| **API Caching** | Local file only | File + MongoDB staging |
+| **Filtering** | Basic record limiting | Llama-based client-side filtering |
+| **Fallbacks** | Single fallback | Multi-level fallbacks per node |
+| **Configuration** | Scattered env vars | Centralized `config.py` |
+| **Testing** | Difficult (monolithic) | Easy (independent nodes) |
+
+## Advanced Usage
+
+### Bearer Token Authentication
+
+If your API uses JWT Bearer tokens for authentication:
+
+```powershell
+$env:ERP_API_BEARER_TOKEN = "your_jwt_token"
+python ai_assistant/main.py --serve
+```
+
+The token will be sent with each request as an `Authorization: Bearer <token>` header.
+
+### Custom Endpoint Definition
+
+Edit `data/endpoints.sample.json`:
+
+```json
 {
-  "get_bl_clients": "/api/BlClient/GetAllBlClients",
-  "get_clients": "/api/Client/GetAllClients"
+  "endpoints": [
+    {
+      "id": "get_clients_paris",
+      "method": "GET",
+      "url": "/api/Client/GetAllClients",
+      "intent": "GET",
+      "keywords": ["client", "clients", "paris", "liste"],
+      "description": "Get all clients"
+    }
+  ]
 }
 ```
 
-Custom file path is supported:
+### Endpoint URL Overrides
 
-```
-$env:ERP_ENDPOINT_OVERRIDES_JSON = "C:/path/to/endpoint_overrides.json"
-```
+For safe corrections without modifying source, use `data/endpoint_overrides.json`:
 
-`endpoint_overrides.json` stays the primary mapping for your business endpoint IDs.
-
-## Auto-load other WebApi APIs
-
-The assistant can enrich endpoint candidates from live Swagger (`/swagger/v1/swagger.json`) so it can use additional GET APIs exposed by WebApi.
-
-Enabled by default:
-
-```
-$env:ERP_LOAD_SWAGGER_ENDPOINTS = "1"
+```json
+{
+  "get_clients": "/api/Client/GetAllClients",
+  "get_orders": "/api/Commande/GetAll"
+}
 ```
 
-Disable if you want only your curated endpoint file:
+### Enable Ollama Integration**
 
-```
-$env:ERP_LOAD_SWAGGER_ENDPOINTS = "0"
+```powershell
+$env:USE_OLLAMA = "1"
+$env:OLLAMA_MODEL_ROUTER = "deepseek-coder:6.7b"
+$env:OLLAMA_MODEL_ANSWER = "llama3.2:latest"
+python ai_assistant/main.py --serve
 ```
 
-When enrichment is enabled, generated Swagger endpoints are filtered by inferred domain from the user question (`commercial`, `stock`, `finance`, `rh`, `achat`, `general`) to reduce noisy routing.
+Make sure Ollama is running:
+```powershell
+ollama serve
+# In another terminal:
+ollama pull deepseek-coder:6.7b
+ollama pull llama3.2:latest
+```
+
+### Enable MongoDB Staging
+
+```powershell
+$env:MONGODB_URI = "mongodb://localhost:27017"
+$env:MONGODB_STAGING_THRESHOLD = "50"
+
+# When API returns > 50 records, they're staged to MongoDB
+# and available for efficient filtering/querying
+```
+
+## Logging & Debugging
+
+```powershell
+$env:DEBUG = "1"
+$env:LOG_LEVEL = "DEBUG"
+python ai_assistant/main.py
+```
+
+## Testing Individual Nodes
+
+```python
+from state import AssistantState
+from nodes.classify_question import classify_question
+
+state: AssistantState = {
+    "question": "Quels clients de Paris en 2025 ?",
+    "errors": []
+}
+result = classify_question(state)
+print(result["intent"], result["domain"])  # AGGREGATE paris
+```

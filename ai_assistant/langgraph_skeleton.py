@@ -12,7 +12,11 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, TypedDict
 
 import requests
+import urllib3
 from langgraph.graph import END, START, StateGraph
+
+# Suppress self-signed certificate warnings for development
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 
 ROOT_DIR = Path(__file__).resolve().parent
@@ -39,9 +43,13 @@ class AssistantState(TypedDict, total=False):
 def _load_endpoints() -> List[Dict[str, Any]]:
     source_mode = os.getenv("ERP_ENDPOINT_SOURCE", "swagger").strip().lower()
 
+    # Primary: Load from Swagger (live API or fallback file)
     if source_mode == "swagger":
-        return _load_swagger_generated_endpoints()
-
+        swagger_endpoints = _load_swagger_generated_endpoints()
+        if swagger_endpoints:
+            return swagger_endpoints
+    
+    # Fallback: Load from configured JSON file
     configured = os.getenv("ERP_ENDPOINTS_JSON", "").strip()
     if configured:
         path = Path(configured)
@@ -53,22 +61,7 @@ def _load_endpoints() -> List[Dict[str, Any]]:
 
     payload = json.loads(path.read_text(encoding="utf-8"))
     configured_endpoints = payload.get("endpoints", [])
-
-    # Optionally enrich with live WebApi routes from Swagger.
-    load_swagger = os.getenv("ERP_LOAD_SWAGGER_ENDPOINTS", "1") == "1"
-    if not load_swagger:
-        return configured_endpoints
-
-    extra = _load_swagger_generated_endpoints()
-    if not extra:
-        return configured_endpoints
-
-    existing_ids = {str(ep.get("id", "")) for ep in configured_endpoints}
-    merged = configured_endpoints.copy()
-    for ep in extra:
-        if ep["id"] not in existing_ids:
-            merged.append(ep)
-    return merged
+    return configured_endpoints
 
 
 def _path_to_generated_id(path: str, method: str) -> str:
@@ -93,7 +86,7 @@ def _load_swagger_payload() -> Dict[str, Any]:
     base_urls = _get_erp_api_base_urls()
     for base_url in base_urls:
         try:
-            response = requests.get(f"{base_url}/swagger/v1/swagger.json", timeout=20)
+            response = requests.get(f"{base_url}/swagger/v1/swagger.json", timeout=20, verify=False)
             response.raise_for_status()
             payload = response.json()
             if isinstance(payload, dict):
@@ -259,9 +252,58 @@ def _extract_simple_params(question: str) -> Dict[str, Any]:
     if id_match:
         out["id"] = int(id_match.group(1))
 
-    date_match = re.search(r"\b(20\d{2}-\d{2}-\d{2})\b", question)
-    if date_match:
-        out["date"] = date_match.group(1)
+    # Try to extract dates in various formats: YYYY-MM-DD or DD-MM-YYYY
+    date_patterns = [
+        r"\b(20\d{2}-\d{2}-\d{2})\b",  # 2025-01-01
+        r"\b(\d{2}-\d{2}-20\d{2})\b",  # 01-01-2025 or MM-DD-YYYY
+    ]
+    
+    dates_found = []
+    for pattern in date_patterns:
+        matches = re.findall(pattern, question)
+        dates_found.extend(matches)
+    
+    if dates_found:
+        # Assume first date is start date, second is end date
+        # Convert all dates to MM-DD-YYYY format for consistency
+        converted_dates = []
+        for date_str in dates_found:
+            try:
+                # Try parsing as YYYY-MM-DD first
+                if date_str.startswith("20"):
+                    d = datetime.strptime(date_str, "%Y-%m-%d")
+                else:
+                    # Assume MM-DD-YYYY or DD-MM-YYYY - try both
+                    try:
+                        d = datetime.strptime(date_str, "%m-%d-%Y")
+                    except ValueError:
+                        d = datetime.strptime(date_str, "%d-%m-%Y")
+                converted_dates.append(d.strftime("%m-%d-%Y"))  # Always convert to MM-DD-YYYY
+            except ValueError:
+                # If parsing fails, keep original
+                converted_dates.append(date_str)
+        
+        if len(converted_dates) >= 1:
+            out["DateDebut"] = converted_dates[0]
+        if len(converted_dates) >= 2:
+            out["DateFin"] = converted_dates[1]
+        elif len(converted_dates) == 1:
+            # If only one date provided, assume it's the end date
+            out["DateFin"] = converted_dates[0]
+
+    # Set default dates if not provided (for stats endpoints)
+    if "DateDebut" not in out or "DateFin" not in out:
+        today = datetime.now(UTC)
+        year_start = today.replace(month=1, day=1)
+        
+        if "DateDebut" not in out:
+            out["DateDebut"] = year_start.strftime("%m-%d-%Y")  # MM-DD-YYYY format
+        if "DateFin" not in out:
+            out["DateFin"] = today.strftime("%m-%d-%Y")  # MM-DD-YYYY format
+
+    # Default commercial category
+    if "commercialCategory" not in out:
+        out["commercialCategory"] = 0
 
     return out
 
@@ -406,6 +448,7 @@ def _score_endpoints(
 
 def _determine_endpoint_limit(question: str, intent: str) -> int:
     q = question.lower()
+    # Explicit multi-endpoint markers - only use multiple if user asks for comparison/combination
     multi_markers = [
         " et ",
         " avec ",
@@ -420,10 +463,16 @@ def _determine_endpoint_limit(question: str, intent: str) -> int:
         " synthese ",
         " synthèse ",
     ]
-    if intent == "AGGREGATE":
-        return 3
+    
+    # Only use multiple endpoints if there's an explicit multi-endpoint marker
     if any(marker in f" {q} " for marker in multi_markers):
         return 3
+    
+    # For AGGREGATE queries without explicit markers, use just 1
+    # (user asked for one specific aggregation, not a comparison)
+    if intent == "AGGREGATE":
+        return 1
+    
     return 1
 
 
@@ -431,7 +480,6 @@ def _select_best_endpoints(
     candidates: List[Dict[str, Any]],
     question: str,
     intent: str,
-    use_ollama: bool,
     router_model: str,
 ) -> tuple[List[Dict[str, Any]], Dict[str, Any], Optional[str]]:
     if not candidates:
@@ -443,44 +491,45 @@ def _select_best_endpoints(
     router_error: Optional[str] = None
     extracted_params: Dict[str, Any] = {}
 
-    if use_ollama:
-        system_prompt = (
-            "You are the primary endpoint router for an ERP API. "
-            "Choose the exact business GET endpoint or endpoints that best answer the user question. "
-            "Prefer business list/report/statistics endpoints over technical, test, auth, or utility endpoints. "
-            "Prefer endpoints like GetAll, OData list, stats, reports, and métier routes that directly match the question. "
-            "Return strict JSON only with fields: endpoint_ids, extracted_params. "
-            "endpoint_ids must be an array using only candidate ids. "
-            "Choose multiple endpoints only when truly necessary."
-        )
-        compact_candidates = _build_router_candidates_payload(candidates, llm_candidate_limit)
-        user_prompt = (
-            f"Question: {question}\n"
-            f"Intent: {intent}\n"
-            f"Candidates: {json.dumps(compact_candidates, ensure_ascii=False)}\n"
-            "Pick the best endpoint_ids from candidates and extract useful parameters from the question. "
-            "Do not choose test or utility endpoints unless the question explicitly asks for them."
-        )
-        try:
-            llm_choice = _call_ollama_json(router_model, system_prompt, user_prompt)
-            if llm_choice:
-                llm_params = llm_choice.get("extracted_params", {})
-                if isinstance(llm_params, dict):
-                    extracted_params.update(llm_params)
-                endpoint_ids = llm_choice.get("endpoint_ids")
-                if isinstance(endpoint_ids, list):
-                    chosen_ids = [str(endpoint_id) for endpoint_id in endpoint_ids if endpoint_id]
-                    chosen = [c for c in candidates if str(c.get("id")) in chosen_ids]
-                    if chosen:
-                        return chosen[:limit], extracted_params, None
-                endpoint_id = llm_choice.get("endpoint_id")
-                if endpoint_id:
-                    chosen = next((c for c in candidates if c.get("id") == endpoint_id), None)
-                    if chosen:
-                        return [chosen], extracted_params, None
-        except Exception as exc:
-            router_error = f"Router Ollama error: {exc}"
+    # Always try Ollama routing first, with graceful fallback to score-based selection
+    system_prompt = (
+        "You are the primary endpoint router for an ERP API. "
+        "Choose the exact business GET endpoint or endpoints that best answer the user question. "
+        "Prefer business list/report/statistics endpoints over technical, test, auth, or utility endpoints. "
+        "Prefer endpoints like GetAll, OData list, stats, reports, and métier routes that directly match the question. "
+        "Return strict JSON only with fields: endpoint_ids, extracted_params. "
+        "endpoint_ids must be an array using only candidate ids. "
+        "Choose multiple endpoints only when truly necessary."
+    )
+    compact_candidates = _build_router_candidates_payload(candidates, llm_candidate_limit)
+    user_prompt = (
+        f"Question: {question}\n"
+        f"Intent: {intent}\n"
+        f"Candidates: {json.dumps(compact_candidates, ensure_ascii=False)}\n"
+        "Pick the best endpoint_ids from candidates and extract useful parameters from the question. "
+        "Do not choose test or utility endpoints unless the question explicitly asks for them."
+    )
+    try:
+        llm_choice = _call_ollama_json(router_model, system_prompt, user_prompt)
+        if llm_choice:
+            llm_params = llm_choice.get("extracted_params", {})
+            if isinstance(llm_params, dict):
+                extracted_params.update(llm_params)
+            endpoint_ids = llm_choice.get("endpoint_ids")
+            if isinstance(endpoint_ids, list):
+                chosen_ids = [str(endpoint_id) for endpoint_id in endpoint_ids if endpoint_id]
+                chosen = [c for c in candidates if str(c.get("id")) in chosen_ids]
+                if chosen:
+                    return chosen[:limit], extracted_params, None
+            endpoint_id = llm_choice.get("endpoint_id")
+            if endpoint_id:
+                chosen = next((c for c in candidates if c.get("id") == endpoint_id), None)
+                if chosen:
+                    return [chosen], extracted_params, None
+    except Exception as exc:
+        router_error = f"Ollama routing unavailable, using score-based fallback: {exc}"
 
+    # Fallback to score-based selection if Ollama is unavailable
     return selected, extracted_params, router_error
 
 
@@ -636,6 +685,13 @@ def _collect_request_parts(selected: Dict[str, Any], params: Dict[str, Any]) -> 
     missing_required = [key for key in required if key not in params]
     query_params = {k: params[k] for k in query_keys if k in params}
 
+    # Always include date and category parameters if present (for stats endpoints)
+    # These might not be in the Swagger definition but are required by the API
+    date_category_keys = ["DateDebut", "DateFin", "commercialCategory"]
+    for key in date_category_keys:
+        if key in params and key not in query_params:
+            query_params[key] = params[key]
+
     # Safe defaults for list endpoints with pagination support.
     if "pageNumber" in query_keys and "pageNumber" not in query_params:
         query_params["pageNumber"] = 1
@@ -677,7 +733,7 @@ def _singularize(token: str) -> str:
 def _fetch_swagger_paths_with_methods(base_urls: List[str]) -> Dict[str, List[str]]:
     for base_url in base_urls:
         try:
-            response = requests.get(f"{base_url}/swagger/v1/swagger.json", timeout=20)
+            response = requests.get(f"{base_url}/swagger/v1/swagger.json", timeout=20, verify=False)
             response.raise_for_status()
             payload = response.json()
             path_map: Dict[str, List[str]] = {}
@@ -777,7 +833,6 @@ def retrieve_candidate_endpoints(state: AssistantState) -> AssistantState:
     question = state.get("question", "")
     intent = state.get("intent", "GET")
     domain = state.get("domain", "general")
-    use_ollama = os.getenv("USE_OLLAMA", "0") == "1"
 
     endpoints = _load_endpoints()
     scored = _score_endpoints(
@@ -797,7 +852,8 @@ def retrieve_candidate_endpoints(state: AssistantState) -> AssistantState:
             apply_business_filter=False,
         )
 
-    max_candidates = 12 if use_ollama else 5
+    # Always return more candidates to give Ollama router more options
+    max_candidates = 12
     return {"endpoint_candidates": scored[:max_candidates]}
 
 
@@ -810,13 +866,12 @@ def select_endpoint_and_params(state: AssistantState) -> AssistantState:
     if selected is None:
         errors.append("No endpoint candidate matched the question.")
 
-    use_ollama = os.getenv("USE_OLLAMA", "0") == "1"
+    # Always try Ollama routing when available, with fallback to scoring-based selection
     router_model = os.getenv("OLLAMA_MODEL_ROUTER", "deepseek-coder:6.7b")
     selected_endpoints, llm_params, router_error = _select_best_endpoints(
         candidates=candidates,
         question=state.get("question", ""),
         intent=state.get("intent", "GET"),
-        use_ollama=use_ollama,
         router_model=router_model,
     )
     if router_error:
@@ -940,7 +995,7 @@ def call_webapi(state: AssistantState) -> AssistantState:
 
         for full_url in candidate_urls:
             try:
-                response = requests.get(full_url, headers=headers, timeout=60)
+                response = requests.get(full_url, headers=headers, timeout=60, verify=False)
                 response.raise_for_status()
                 content_type = response.headers.get("Content-Type", "").lower()
                 if "json" in content_type:
@@ -1036,9 +1091,9 @@ def answer_generation(state: AssistantState) -> AssistantState:
     filtered = state.get("filtered_result", {})
     compact_evidence = _build_answer_evidence(filtered)
 
-    use_ollama = os.getenv("USE_OLLAMA", "0") == "1"
     model = os.getenv("OLLAMA_MODEL_ANSWER", "llama3.2:latest")
     records = filtered.get("records", [])
+    errors = state.get("errors", []).copy()
 
     def build_fallback_answer() -> str:
         endpoint_ids = [str(ep.get("id")) for ep in selected_endpoints] if selected_endpoints else []
@@ -1057,31 +1112,27 @@ def answer_generation(state: AssistantState) -> AssistantState:
             "Je n'ai pas trouvé de données suffisantes pour répondre à cette question avec certitude."
         )
 
-    if use_ollama:
-        system_prompt = (
-            "You are an ERP support assistant. "
-            "Answer only from provided evidence. "
-            "Do not expose excessive internal data. "
-            "Summarize only the information useful for the client. "
-            "If evidence is missing, say what is missing."
-        )
-        user_prompt = (
-            f"Question: {question}\n"
-            f"Primary endpoint: {selected}\n"
-            f"Selected endpoints: {json.dumps(selected_endpoints, ensure_ascii=False)}\n"
-            f"Evidence: {json.dumps(compact_evidence, ensure_ascii=False)}"
-        )
-        try:
-            answer = _call_ollama_chat(model, system_prompt, user_prompt)
-        except Exception as exc:
-            errors = state.get("errors", []).copy()
-            errors.append(f"Ollama error: {exc}")
-            answer = build_fallback_answer()
-            return {"answer": answer, "errors": errors}
-    else:
+    # Always try Ollama answer generation first, with fallback
+    system_prompt = (
+        "You are an ERP support assistant. "
+        "Answer only from provided evidence. "
+        "Do not expose excessive internal data. "
+        "Summarize only the information useful for the client. "
+        "If evidence is missing, say what is missing."
+    )
+    user_prompt = (
+        f"Question: {question}\n"
+        f"Primary endpoint: {selected}\n"
+        f"Selected endpoints: {json.dumps(selected_endpoints, ensure_ascii=False)}\n"
+        f"Evidence: {json.dumps(compact_evidence, ensure_ascii=False)}"
+    )
+    try:
+        answer = _call_ollama_chat(model, system_prompt, user_prompt)
+    except Exception as exc:
+        errors.append(f"Ollama answer generation unavailable, using fallback: {exc}")
         answer = build_fallback_answer()
 
-    return {"answer": answer}
+    return {"answer": answer, "errors": errors}
 
 
 def answer_validation(state: AssistantState) -> AssistantState:

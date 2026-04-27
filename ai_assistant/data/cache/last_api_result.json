@@ -1,21 +1,314 @@
 {
-  "generatedAt": "2026-04-10T10:49:42.010508+00:00",
+  "generatedAt": "2026-04-27T09:03:38.511154+00:00",
   "endpoints": [
-    "webapi_get_api_b2b_intermediate_getallarticles"
+    "webapi_get_api_statsvente_statsvente"
   ],
-  "params": {},
+  "params": {
+    "DateDebut": "01-01-2026",
+    "DateFin": "12-31-2026",
+    "commercialCategory": 1
+  },
   "calls": [
     {
-      "endpoint": "webapi_get_api_b2b_intermediate_getallarticles",
-      "url": "/api/B2b_intermediate/GetAllArticles",
-      "resolvedUrl": "/api/B2b_intermediate/GetAllArticles",
-      "fullUrl": null,
-      "query": {},
-      "statusCode": null,
-      "dataCount": 0,
-      "error": "401 Client Error: Unauthorized for url: http://localhost:5006/api/B2b_intermediate/GetAllArticles",
-      "raw": null
+      "endpoint": "webapi_get_api_statsvente_statsvente",
+      "url": "/api/StatsVente/StatsVente",
+      "resolvedUrl": "/api/StatsVente/StatsVente",
+      "fullUrl": "https://localhost:44393/api/StatsVente/StatsVente?DateDebut=01-01-2026&DateFin=12-31-2026&commercialCategory=1",
+      "query": {
+        "DateDebut": "01-01-2026",
+        "DateFin": "12-31-2026",
+        "commercialCategory": 1
+      },
+      "statusCode": 200,
+      "dataCount": 14,
+      "error": null,
+      "raw": {
+        "message": "Récupéré avec succès",
+        "data": [
+          {
+            "code": "00-1/2L",
+            "designation": "Bidon rond 500ml (73)-NU/NU ",
+            "qteVente": 14.0,
+            "totalHT": 115.41798,
+            "totalTTC": 137.347396,
+            "period": "02/2026"
+          },
+          {
+            "code": "00-002",
+            "designation": "test ",
+            "qteVente": -5.0,
+            "totalHT": -47.4,
+            "totalTTC": -45.006,
+            "period": "04/2026"
+          },
+          {
+            "code": "00-1/2L",
+            "designation": "Bidon rond 500ml (73)-NU/NU ",
+            "qteVente": 0.0,
+            "totalHT": -0.018175,
+            "totalTTC": -0.021628,
+            "period": "04/2026"
+          },
+          {
+            "code": "00-101",
+            "designation": "Bureau reference 564",
+            "qteVente": -11.0,
+            "totalHT": -75.75,
+            "totalTTC": -90.1425,
+            "period": "04/2026"
+          },
+          {
+            "code": "st",
+            "designation": ". lkq slkjfh",
+            "qteVente": 1.0,
+            "totalHT": 1.0,
+            "totalTTC": 1.19,
+            "period": "04/2026"
+          },
+          {
+            "code": "Commercial LED-00001",
+            "designation": "LED Tubes T8 ",
+            "qteVente": 10.0,
+            "totalHT": 151.5,
+            "totalTTC": 151.5,
+            "period": "05/2026"
+          },
+          {
+            "code": "Aluminium papier-00001",
+            "designation": "Ristourne",
+            "qteVente": -1.0,
+            "totalHT": -1500.0,
+            "totalTTC": -1785.0,
+            "period": "05/2026"
+          },
+          {
+            "code": "UNITEDELL5040",
+            "designation": "UNITE CENTRAL DELL 5040 ",
+            "qteVente": 3.0,
+            "totalHT": 2040.0,
+            "totalTTC": 2182.8,
+            "period": "07/2026"
+          },
+          {
+            "code": "LENOVOTHINKP",
+            "designation": "PC PORTABLE LENOVO THINK PAD 1512 GENERATION  ",
+            "qteVente": 1.0,
+            "totalHT": 1250.0,
+            "totalTTC": 1337.5,
+            "period": "07/2026"
+          },
+          {
+            "code": "ECRANDELL",
+            "designation": "ECRANDELL ",
+            "qteVente": 3.0,
+            "totalHT": 490.002,
+            "totalTTC": 524.30214,
+            "period": "07/2026"
+          },
+          {
+            "code": "09-demo",
+            "designation": "Quincaillerie exemple 1 ",
+            "qteVente": 4.0,
+            "totalHT": 135.0,
+            "totalTTC": 135.0,
+            "period": "09/2026"
+          },
+          {
+            "code": "00-100",
+            "designation": "Boite 100ml (52)-CB avec lot",
+            "qteVente": 10.0,
+            "totalHT": 189.31333,
+            "totalTTC": 189.31333,
+            "period": "09/2026"
+          },
+          {
+            "code": "00-003",
+            "designation": "test2 ",
+            "qteVente": 1.0,
+            "totalHT": 12.6,
+            "totalTTC": 14.112,
+            "period": "09/2026"
+          },
+          {
+            "code": "00-002",
+            "designation": "test ",
+            "qteVente": 7.0,
+            "totalHT": 70.7,
+            "totalTTC": 70.7,
+            "period": "09/2026"
+          }
+        ]
+      }
     }
   ],
-  "data": []
+  "data": [
+    {
+      "endpoint": "webapi_get_api_statsvente_statsvente",
+      "sourceUrl": "https://localhost:44393/api/StatsVente/StatsVente?DateDebut=01-01-2026&DateFin=12-31-2026&commercialCategory=1",
+      "record": {
+        "code": "00-1/2L",
+        "designation": "Bidon rond 500ml (73)-NU/NU ",
+        "qteVente": 14.0,
+        "totalHT": 115.41798,
+        "totalTTC": 137.347396,
+        "period": "02/2026"
+      }
+    },
+    {
+      "endpoint": "webapi_get_api_statsvente_statsvente",
+      "sourceUrl": "https://localhost:44393/api/StatsVente/StatsVente?DateDebut=01-01-2026&DateFin=12-31-2026&commercialCategory=1",
+      "record": {
+        "code": "00-002",
+        "designation": "test ",
+        "qteVente": -5.0,
+        "totalHT": -47.4,
+        "totalTTC": -45.006,
+        "period": "04/2026"
+      }
+    },
+    {
+      "endpoint": "webapi_get_api_statsvente_statsvente",
+      "sourceUrl": "https://localhost:44393/api/StatsVente/StatsVente?DateDebut=01-01-2026&DateFin=12-31-2026&commercialCategory=1",
+      "record": {
+        "code": "00-1/2L",
+        "designation": "Bidon rond 500ml (73)-NU/NU ",
+        "qteVente": 0.0,
+        "totalHT": -0.018175,
+        "totalTTC": -0.021628,
+        "period": "04/2026"
+      }
+    },
+    {
+      "endpoint": "webapi_get_api_statsvente_statsvente",
+      "sourceUrl": "https://localhost:44393/api/StatsVente/StatsVente?DateDebut=01-01-2026&DateFin=12-31-2026&commercialCategory=1",
+      "record": {
+        "code": "00-101",
+        "designation": "Bureau reference 564",
+        "qteVente": -11.0,
+        "totalHT": -75.75,
+        "totalTTC": -90.1425,
+        "period": "04/2026"
+      }
+    },
+    {
+      "endpoint": "webapi_get_api_statsvente_statsvente",
+      "sourceUrl": "https://localhost:44393/api/StatsVente/StatsVente?DateDebut=01-01-2026&DateFin=12-31-2026&commercialCategory=1",
+      "record": {
+        "code": "st",
+        "designation": ". lkq slkjfh",
+        "qteVente": 1.0,
+        "totalHT": 1.0,
+        "totalTTC": 1.19,
+        "period": "04/2026"
+      }
+    },
+    {
+      "endpoint": "webapi_get_api_statsvente_statsvente",
+      "sourceUrl": "https://localhost:44393/api/StatsVente/StatsVente?DateDebut=01-01-2026&DateFin=12-31-2026&commercialCategory=1",
+      "record": {
+        "code": "Commercial LED-00001",
+        "designation": "LED Tubes T8 ",
+        "qteVente": 10.0,
+        "totalHT": 151.5,
+        "totalTTC": 151.5,
+        "period": "05/2026"
+      }
+    },
+    {
+      "endpoint": "webapi_get_api_statsvente_statsvente",
+      "sourceUrl": "https://localhost:44393/api/StatsVente/StatsVente?DateDebut=01-01-2026&DateFin=12-31-2026&commercialCategory=1",
+      "record": {
+        "code": "Aluminium papier-00001",
+        "designation": "Ristourne",
+        "qteVente": -1.0,
+        "totalHT": -1500.0,
+        "totalTTC": -1785.0,
+        "period": "05/2026"
+      }
+    },
+    {
+      "endpoint": "webapi_get_api_statsvente_statsvente",
+      "sourceUrl": "https://localhost:44393/api/StatsVente/StatsVente?DateDebut=01-01-2026&DateFin=12-31-2026&commercialCategory=1",
+      "record": {
+        "code": "UNITEDELL5040",
+        "designation": "UNITE CENTRAL DELL 5040 ",
+        "qteVente": 3.0,
+        "totalHT": 2040.0,
+        "totalTTC": 2182.8,
+        "period": "07/2026"
+      }
+    },
+    {
+      "endpoint": "webapi_get_api_statsvente_statsvente",
+      "sourceUrl": "https://localhost:44393/api/StatsVente/StatsVente?DateDebut=01-01-2026&DateFin=12-31-2026&commercialCategory=1",
+      "record": {
+        "code": "LENOVOTHINKP",
+        "designation": "PC PORTABLE LENOVO THINK PAD 1512 GENERATION  ",
+        "qteVente": 1.0,
+        "totalHT": 1250.0,
+        "totalTTC": 1337.5,
+        "period": "07/2026"
+      }
+    },
+    {
+      "endpoint": "webapi_get_api_statsvente_statsvente",
+      "sourceUrl": "https://localhost:44393/api/StatsVente/StatsVente?DateDebut=01-01-2026&DateFin=12-31-2026&commercialCategory=1",
+      "record": {
+        "code": "ECRANDELL",
+        "designation": "ECRANDELL ",
+        "qteVente": 3.0,
+        "totalHT": 490.002,
+        "totalTTC": 524.30214,
+        "period": "07/2026"
+      }
+    },
+    {
+      "endpoint": "webapi_get_api_statsvente_statsvente",
+      "sourceUrl": "https://localhost:44393/api/StatsVente/StatsVente?DateDebut=01-01-2026&DateFin=12-31-2026&commercialCategory=1",
+      "record": {
+        "code": "09-demo",
+        "designation": "Quincaillerie exemple 1 ",
+        "qteVente": 4.0,
+        "totalHT": 135.0,
+        "totalTTC": 135.0,
+        "period": "09/2026"
+      }
+    },
+    {
+      "endpoint": "webapi_get_api_statsvente_statsvente",
+      "sourceUrl": "https://localhost:44393/api/StatsVente/StatsVente?DateDebut=01-01-2026&DateFin=12-31-2026&commercialCategory=1",
+      "record": {
+        "code": "00-100",
+        "designation": "Boite 100ml (52)-CB avec lot",
+        "qteVente": 10.0,
+        "totalHT": 189.31333,
+        "totalTTC": 189.31333,
+        "period": "09/2026"
+      }
+    },
+    {
+      "endpoint": "webapi_get_api_statsvente_statsvente",
+      "sourceUrl": "https://localhost:44393/api/StatsVente/StatsVente?DateDebut=01-01-2026&DateFin=12-31-2026&commercialCategory=1",
+      "record": {
+        "code": "00-003",
+        "designation": "test2 ",
+        "qteVente": 1.0,
+        "totalHT": 12.6,
+        "totalTTC": 14.112,
+        "period": "09/2026"
+      }
+    },
+    {
+      "endpoint": "webapi_get_api_statsvente_statsvente",
+      "sourceUrl": "https://localhost:44393/api/StatsVente/StatsVente?DateDebut=01-01-2026&DateFin=12-31-2026&commercialCategory=1",
+      "record": {
+        "code": "00-002",
+        "designation": "test ",
+        "qteVente": 7.0,
+        "totalHT": 70.7,
+        "totalTTC": 70.7,
+        "period": "09/2026"
+      }
+    }
+  ]
 }

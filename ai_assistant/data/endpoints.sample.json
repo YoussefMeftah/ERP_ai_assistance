@@ -1,25 +1,51 @@
 {
   "endpoints": [
     {
+      "id": "webapi_get_api_statsvente_statsventeparticle",
+      "method": "GET",
+      "url": "/api/StatsVente/StatsVenteParArticle",
+      "intent": "AGGREGATE",
+      "keywords": ["article", "articles", "produit", "produits", "par article", "ventes article"],
+      "description": "Affiche les ventes groupées par article/produit",
+      "requiredParameters": ["DateDebut", "DateFin"],
+      "role": "commercial"
+    },
+    {
+      "id": "webapi_get_api_statsvente_statsventeparclient",
+      "method": "GET",
+      "url": "/api/StatsVente/StatsVenteParClient",
+      "intent": "AGGREGATE",
+      "keywords": ["client", "clients", "par client", "ventes client"],
+      "description": "Affiche les ventes groupées par client",
+      "requiredParameters": ["DateDebut", "DateFin"],
+      "role": "commercial"
+    },
+    {
+      "id": "webapi_get_api_commandeclient_getallclients",
+      "method": "GET",
+      "url": "/api/CommandeClient/GetAllClients",
+      "intent": "GET",
+      "keywords": ["clients", "liste", "afficher", "tout"],
+      "description": "Liste de tous les clients",
+      "role": "commercial"
+    },
+    {
       "id": "get_clients",
       "method": "GET",
       "url": "/api/clients",
       "intent": "GET",
-      "keywords": ["clients", "liste", "afficher"]
+      "keywords": ["clients", "liste", "afficher"],
+      "description": "Récupérer tous les clients",
+      "role": "commercial"
     },
     {
       "id": "filter_clients",
       "method": "GET",
       "url": "/odata/ClientOdata",
       "intent": "FILTER",
-      "keywords": ["clients", "filtre", "ville", "condition"]
-    },
-    {
-      "id": "get_stats_ventes",
-      "method": "GET",
-      "url": "/api/stats/ventes",
-      "intent": "AGGREGATE",
-      "keywords": ["statistiques", "ventes", "total", "chiffre"]
+      "keywords": ["clients", "filtre", "ville", "condition"],
+      "description": "Filtrer les clients avec OData",
+      "role": "commercial"
     }
   ]
 }
