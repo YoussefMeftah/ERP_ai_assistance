@@ -211,7 +211,7 @@ def select_best_endpoints_with_llm(
     )
     
     try:
-        llm_choice = call_ollama_json(router_model, system_prompt, user_prompt)
+        llm_choice = call_ollama_json(router_model, system_prompt, user_prompt, debug=True)
         
         if not llm_choice:
             print(f"[DEBUG] ⚠️  DeepSeek returned empty/invalid JSON")

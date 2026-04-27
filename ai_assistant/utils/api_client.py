@@ -57,6 +57,7 @@ def call_ollama_json(
     model: str,
     system_prompt: str,
     user_prompt: str,
+    debug: bool = False,
 ) -> Optional[Dict[str, Any]]:
     """Call Ollama and expect JSON response.
     
@@ -66,12 +67,19 @@ def call_ollama_json(
         model: Model name
         system_prompt: System message
         user_prompt: User message
+        debug: If True, print raw response for debugging
     
     Returns:
         Parsed JSON dict, or None if parsing fails
     """
     router_timeout = config.ollama_router_timeout_seconds()
     raw = call_ollama_chat(model, system_prompt, user_prompt, timeout_seconds=router_timeout)
+    
+    if debug:
+        print(f"[DEBUG] Raw response from {model}:")
+        print(f"  Length: {len(raw)} chars")
+        print(f"  First 200 chars: {raw[:200]!r}")
+        print(f"  Full response: {raw!r}")
     
     # Clean markdown fence wrappers
     cleaned = raw.strip()
@@ -81,7 +89,10 @@ def call_ollama_json(
         data = json.loads(cleaned)
         if isinstance(data, dict):
             return data
-    except json.JSONDecodeError:
+    except json.JSONDecodeError as e:
+        if debug:
+            print(f"[DEBUG] JSON parse error: {e}")
+            print(f"[DEBUG] Cleaned text: {cleaned!r}")
         return None
     
     return None
