@@ -108,17 +108,23 @@ Return ONLY valid JSON, no explanations."""
         if result:
             print(f"\n✅ Extracted Parameters:")
             params = result.get("extracted_parameters", {})
-            for param_name, details in params.items():
-                value = details.get("value")
-                confidence = details.get("confidence")
-                print(f"   • {param_name}: '{value}' ({confidence} confidence)")
-                if details.get("reason"):
-                    print(f"     → {details['reason']}")
+            if not params:
+                print(f"   ⚠️  No parameters found in response")
+                print(f"   Response: {json.dumps(result, indent=2)[:200]}")
+            else:
+                for param_name, details in params.items():
+                    value = details.get("value")
+                    confidence = details.get("confidence")
+                    print(f"   • {param_name}: '{value}' ({confidence} confidence)")
+                    if details.get("reason"):
+                        print(f"     → {details['reason']}")
             
             if result.get("parameter_summary"):
                 print(f"\n📝 Summary: {result['parameter_summary']}")
             
             return result.get("extracted_parameters", {})
+        else:
+            print(f"❌ DeepSeek returned invalid JSON or empty response")
     except Exception as e:
         print(f"❌ Error: {e}")
     
@@ -216,6 +222,10 @@ Return ONLY valid JSON."""
                     print(f"   • {alt.get('id')}: {alt.get('confidence', 0):.0%} - {alt.get('reason')}")
             
             return result.get("selected_endpoint", {})
+        else:
+            print(f"❌ DeepSeek returned invalid JSON or no endpoint selected")
+            if result:
+                print(f"   Response: {json.dumps(result, indent=2)[:300]}")
     except Exception as e:
         print(f"❌ Error: {e}")
     
@@ -248,11 +258,27 @@ def score_candidates(question: str, endpoints: list) -> list:
         apply_business_filter=True
     )
     
-    print(f"\n🏆 Top Candidates (by keyword score):")
-    for i, ep in enumerate(scored[:5], 1):
-        score = ep.get("score", 0)
-        print(f"   {i}. {ep.get('id')} (score: {score:.2f})")
-        print(f"      {ep.get('description')[:60]}...")
+    if not scored:
+        print(f"\n⚠️  No business endpoints found with filter. Retrying without filter...")
+        scored = score_endpoints(
+            endpoints=endpoints,
+            question=question,
+            intent=intent,
+            domain=domain,
+            apply_business_filter=False
+        )
+    
+    if scored:
+        print(f"\n🏆 Top Candidates (by keyword score):")
+        for i, ep in enumerate(scored[:5], 1):
+            score = ep.get("score", 0)
+            print(f"   {i}. {ep.get('id')} (score: {score:.2f})")
+            print(f"      {ep.get('description')[:60]}...")
+    else:
+        print(f"\n❌ No endpoints found! Total loaded: {len(endpoints)}")
+        print(f"   Sample endpoints:")
+        for ep in endpoints[:3]:
+            print(f"   • {ep.get('id')}: {ep.get('description')[:50]}...")
     
     return scored
 
