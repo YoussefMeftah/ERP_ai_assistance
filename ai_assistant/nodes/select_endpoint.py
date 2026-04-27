@@ -212,36 +212,68 @@ def select_best_endpoints_with_llm(
     
     try:
         llm_choice = call_ollama_json(router_model, system_prompt, user_prompt)
-        if llm_choice:
-            # Log DeepSeek's reasoning if available
-            if "reasoning" in llm_choice:
-                print(f"[DEBUG] DeepSeek Reasoning: {llm_choice.get('reasoning')}")
-            
-            llm_params = llm_choice.get("extracted_params", {})
-            if isinstance(llm_params, dict):
-                extracted_params.update(llm_params)
-                if llm_params:
-                    print(f"[DEBUG] Extracted Parameters: {json.dumps(llm_params, ensure_ascii=False)}")
-            
-            # Try endpoint_ids array first
-            endpoint_ids = llm_choice.get("endpoint_ids")
-            if isinstance(endpoint_ids, list):
-                chosen_ids = [str(eid) for eid in endpoint_ids if eid]
-                chosen = [c for c in candidates if str(c.get("id")) in chosen_ids]
-                if chosen:
-                    print(f"[DEBUG] DeepSeek Selected Endpoints: {chosen_ids}")
-                    return chosen[:limit], extracted_params, None
-            
-            # Fallback to single endpoint_id
-            endpoint_id = llm_choice.get("endpoint_id")
-            if endpoint_id:
+        
+        if not llm_choice:
+            print(f"[DEBUG] ⚠️  DeepSeek returned empty/invalid JSON")
+            # Fallback: use top candidate by score
+            if candidates:
+                top = candidates[0]
+                print(f"[DEBUG] Fallback: Using top candidate by score: {top.get('id')}")
+                return [top], extracted_params, None
+            return None, extracted_params, "DeepSeek returned invalid JSON and no fallback candidates"
+        
+        print(f"[DEBUG] DeepSeek response: {json.dumps(llm_choice, ensure_ascii=False)[:200]}")
+        
+        # Log DeepSeek's reasoning if available
+        if "reasoning" in llm_choice:
+            print(f"[DEBUG] DeepSeek Reasoning: {llm_choice.get('reasoning')}")
+        
+        llm_params = llm_choice.get("extracted_params", {})
+        if isinstance(llm_params, dict):
+            extracted_params.update(llm_params)
+            if llm_params:
+                print(f"[DEBUG] Extracted Parameters: {json.dumps(llm_params, ensure_ascii=False)}")
+        
+        # Try endpoint_ids array first
+        endpoint_ids = llm_choice.get("endpoint_ids")
+        if isinstance(endpoint_ids, list):
+            chosen_ids = [str(eid) for eid in endpoint_ids if eid]
+            chosen = [c for c in candidates if str(c.get("id")) in chosen_ids]
+            if chosen:
+                print(f"[DEBUG] DeepSeek Selected Endpoints: {chosen_ids}")
+                return chosen[:limit], extracted_params, None
+        
+        # Fallback to single endpoint_id
+        endpoint_id = llm_choice.get("endpoint_id")
+        if endpoint_id:
+            chosen = next(
+                (c for c in candidates if c.get("id") == endpoint_id),
+                None
+            )
+            if chosen:
+                print(f"[DEBUG] DeepSeek Selected Endpoint: {endpoint_id}")
+                return [chosen], extracted_params, None
+        
+        # Fallback: check for "selected_endpoint" (common field name)
+        selected = llm_choice.get("selected_endpoint")
+        if selected and isinstance(selected, dict):
+            selected_id = selected.get("id")
+            if selected_id:
                 chosen = next(
-                    (c for c in candidates if c.get("id") == endpoint_id),
+                    (c for c in candidates if c.get("id") == selected_id),
                     None
                 )
                 if chosen:
-                    print(f"[DEBUG] DeepSeek Selected Endpoint: {endpoint_id}")
+                    print(f"[DEBUG] DeepSeek Selected via 'selected_endpoint': {selected_id}")
                     return [chosen], extracted_params, None
+        
+        # Final fallback: use top candidate
+        print(f"[DEBUG] ⚠️  No valid endpoint_ids found in response. Using top candidate by score.")
+        if candidates:
+            top = candidates[0]
+            print(f"[DEBUG] Fallback endpoint: {top.get('id')}")
+            return [top], extracted_params, None
+            
     except Exception as exc:
         return None, extracted_params, f"DeepSeek routing failed: {exc}"
     

@@ -134,7 +134,13 @@ Examples:
     
     if error:
         print(f"❌ Error: {error}")
-        return 1
+        print(f"\n⚠️  Trying fallback: selecting top endpoint by score...")
+        if scored:
+            selected_endpoints = [scored[0]]
+            print(f"✅ Selected top endpoint by score: {scored[0].get('id')}")
+        else:
+            print(f"❌ No endpoints available for fallback")
+            return 1
     
     # ===== FINAL RESULTS =====
     print_section("FINAL RESULTS")
