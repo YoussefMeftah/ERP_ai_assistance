@@ -102,8 +102,7 @@ Return ONLY valid JSON, no explanations."""
         result = call_ollama_json(
             model=config.ollama_model_router(),
             system_prompt=system_prompt,
-            user_prompt=user_prompt,
-            timeout=config.ollama_router_timeout_seconds()
+            user_prompt=user_prompt
         )
         
         if result:
@@ -199,8 +198,7 @@ Return ONLY valid JSON."""
         result = call_ollama_json(
             model=config.ollama_model_router(),
             system_prompt=system_prompt,
-            user_prompt=user_prompt,
-            timeout=config.ollama_router_timeout_seconds()
+            user_prompt=user_prompt
         )
         
         if result and result.get("selected_endpoint"):
