@@ -109,11 +109,16 @@ class EvaluationResultAnalyzer:
         
         # Aggregate each metric
         for key in all_keys:
-            scores = [
-                result.get("scores", {}).get(key, 0)
-                for result in results
-                if "scores" in result
-            ]
+            scores = []
+            for result in results:
+                if "scores" in result:
+                    score = result.get("scores", {}).get(key, 0)
+                    # Convert to float in case it's a string
+                    try:
+                        scores.append(float(score))
+                    except (ValueError, TypeError):
+                        scores.append(0.0)
+            
             if scores:
                 metrics[key] = {
                     "mean": sum(scores) / len(scores),
