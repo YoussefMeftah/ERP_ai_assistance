@@ -668,13 +668,18 @@ async def run_test_case_async(
         
         # Get endpoint ID
         endpoint_id = result.get("selected_endpoint", {}).get("id", "UNKNOWN")
+        selected_endpoint = result.get("selected_endpoint", {})
         
-        # Look up endpoint path from TEST_ENDPOINTS
-        endpoint_path = "UNKNOWN"
-        for endpoint in TEST_ENDPOINTS:
-            if endpoint.get("id") == endpoint_id:
-                endpoint_path = endpoint.get("path", "UNKNOWN")
-                break
+        # Get path directly from selected_endpoint (it should already have it from TEST_ENDPOINTS)
+        # Fallback to lookup if not found
+        endpoint_path = selected_endpoint.get("path", "UNKNOWN")
+        
+        if endpoint_path == "UNKNOWN" and endpoint_id != "UNKNOWN":
+            # Fallback lookup if path wasn't in selected_endpoint
+            for endpoint in TEST_ENDPOINTS:
+                if endpoint.get("id") == endpoint_id:
+                    endpoint_path = endpoint.get("path", "UNKNOWN")
+                    break
         
         # Extract relevant outputs
         return {

@@ -313,6 +313,16 @@ class BatchEvaluationRunner:
                             # Use path instead of ID since test cases expect paths
                             pred_value = str(pred.get("endpoint_path", ""))
                             expected_value = str(expected.get("endpoint", ""))
+                            # Debug: log first few comparisons
+                            if i <= 5:
+                                match = "✅" if pred_value == expected_value else "❌"
+                                print(f"[DEBUG] Case {i:2d} {match} pred={pred_value!r} vs expected={expected_value!r}")
+                            # Debug: track different endpoint mismatches
+                            if pred_value != expected_value and i <= 15:
+                                if not hasattr(self, '_endpoint_mismatches'):
+                                    self._endpoint_mismatches = {}
+                                key = f"{expected_value} -> {pred_value}"
+                                self._endpoint_mismatches[key] = self._endpoint_mismatches.get(key, 0) + 1
                         elif "Parameter" in evaluator_name:
                             # ParameterExtractionEvaluator: compare extracted_params
                             pred_value = json.dumps(pred.get("extracted_params", {}), ensure_ascii=False)
@@ -362,6 +372,12 @@ class BatchEvaluationRunner:
             print(f"\n📊 Results: {len(results)}/{len(examples)} successful")
             if failed:
                 print(f"❌ Failed: {len(failed)}")
+        
+        # Print endpoint mismatch summary if available
+        if hasattr(self, '_endpoint_mismatches') and self._endpoint_mismatches:
+            print(f"\n[DEBUG] Endpoint mismatches:")
+            for mismatch, count in sorted(self._endpoint_mismatches.items(), key=lambda x: x[1], reverse=True):
+                print(f"  {count}x {mismatch}")
         
         return results
     
