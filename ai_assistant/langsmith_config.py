@@ -188,7 +188,15 @@ class EvaluationResultAnalyzer:
             
             # Add if any score is below 0.5
             scores = result.get("scores", {})
-            if any(score < 0.5 for score in scores.values()):
+            # Convert all scores to float for comparison
+            numeric_scores = []
+            for score in scores.values():
+                try:
+                    numeric_scores.append(float(score))
+                except (ValueError, TypeError):
+                    numeric_scores.append(0.0)
+            
+            if any(score < 0.5 for score in numeric_scores):
                 failures.append(result)
         
         return failures
