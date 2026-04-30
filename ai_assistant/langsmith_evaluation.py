@@ -56,9 +56,103 @@ from nodes import (
 LANGSMITH_PROJECT_NAME = config.langsmith_project_name()
 DATASET_NAME = config.langsmith_dataset_name()
 API_TEST_EVALUATION_PATH = Path(__file__).parent.parent / "api_test_evaluation.json"
+API_TEST_JSON_PATH = Path(__file__).parent.parent / "api_test.json"
 
 # Initialize LangSmith client
 client = Client()
+
+
+# ============================================================================
+# TEST ENDPOINTS LOADING FROM api_test.json (for LangSmith evaluation only)
+# ============================================================================
+
+def load_test_endpoints_from_api_test() -> List[Dict[str, Any]]:
+    """
+    Load endpoint definitions from api_test.json for evaluation.
+    
+    Uses controlled test endpoints instead of live Swagger endpoints.
+    
+    Returns:
+        List of endpoint definitions from api_test.json
+    """
+    if not API_TEST_JSON_PATH.exists():
+        print(f"❌ api_test.json not found at {API_TEST_JSON_PATH}")
+        return []
+    
+    try:
+        with open(API_TEST_JSON_PATH, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+        
+        endpoints = data.get("endpoints", [])
+        if endpoints:
+            print(f"✅ Loaded {len(endpoints)} test endpoints from api_test.json")
+            return endpoints
+        else:
+            print(f"⚠️  No endpoints found in api_test.json")
+            return []
+    
+    except json.JSONDecodeError as e:
+        print(f"❌ Error parsing api_test.json: {e}")
+        return []
+    except Exception as e:
+        print(f"❌ Error loading api_test.json: {e}")
+        return []
+
+
+# Cache test endpoints at module load time
+TEST_ENDPOINTS = load_test_endpoints_from_api_test()
+
+
+# ============================================================================
+# CUSTOM NODES FOR EVALUATION (using test endpoints)
+# ============================================================================
+
+def retrieve_candidate_endpoints_eval(state: AssistantState) -> AssistantState:
+    """
+    Retrieve and score endpoint candidates using TEST_ENDPOINTS from api_test.json.
+    
+    This is a custom version for LangSmith evaluation that uses controlled test endpoints
+    instead of live Swagger endpoints.
+    
+    Args:
+        state: Current graph state
+    
+    Returns:
+        Updated state with endpoint_candidates
+    """
+    from nodes.endpoint_scoring import score_endpoints
+    
+    question = state.get("question", "")
+    intent = state.get("intent", "GET")
+    domain = state.get("domain", "general")
+    
+    # Use TEST_ENDPOINTS from api_test.json
+    if not TEST_ENDPOINTS:
+        print("❌ No test endpoints available")
+        return {"endpoint_candidates": []}
+    
+    # Score with business filter
+    scored = score_endpoints(
+        endpoints=TEST_ENDPOINTS,
+        question=question,
+        intent=intent,
+        domain=domain,
+        apply_business_filter=True,
+    )
+    
+    # If no business endpoints found, try without filter
+    if not scored:
+        scored = score_endpoints(
+            endpoints=TEST_ENDPOINTS,
+            question=question,
+            intent=intent,
+            domain=domain,
+            apply_business_filter=False,
+        )
+    
+    # Return up to 12 best candidates
+    max_candidates = 12
+    return {"endpoint_candidates": scored[:max_candidates]}
 
 
 # ============================================================================
@@ -517,14 +611,16 @@ def build_evaluation_graph():
     Build a simplified graph focusing on endpoint selection and parameter extraction.
     This runs the first 3 nodes: classify -> retrieve -> select
     
+    Uses TEST_ENDPOINTS from api_test.json for retrieve_candidate_endpoints node.
+    
     Returns:
         Compiled LangGraph application
     """
     graph = StateGraph(AssistantState)
     
-    # Add only the nodes we're evaluating
+    # Add nodes - use custom retrieve function for test endpoints
     graph.add_node("classify_question", classify_question)
-    graph.add_node("retrieve_candidate_endpoints", retrieve_candidate_endpoints)
+    graph.add_node("retrieve_candidate_endpoints", retrieve_candidate_endpoints_eval)
     graph.add_node("select_endpoint_and_params", select_endpoint_and_params)
     
     # Add edges
