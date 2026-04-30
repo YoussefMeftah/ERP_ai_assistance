@@ -76,6 +76,7 @@ def load_test_endpoints_from_api_test() -> List[Dict[str, Any]]:
         List of endpoint definitions from api_test.json
     """
     import re
+    from utils.text_utils import infer_domain_from_path
     
     if not API_TEST_JSON_PATH.exists():
         print(f"❌ api_test.json not found at {API_TEST_JSON_PATH}")
@@ -147,7 +148,7 @@ def load_test_endpoints_from_api_test() -> List[Dict[str, Any]]:
                     "parameters": param_details,
                     "required_parameters": required_params,
                     "keywords": keywords,  # Extracted inline
-                    "role": tag.lower() if tag and tag.lower() != "general" else "commercial",
+                    "role": infer_domain_from_path(path),  # Use domain inference from path, not just tag
                     "intent": method.upper()
                 }
                 
@@ -209,13 +210,15 @@ def retrieve_candidate_endpoints_eval(state: AssistantState) -> AssistantState:
         print("❌ No test endpoints available")
         return {"endpoint_candidates": []}
     
-    # Score endpoints WITHOUT business filter (test endpoints are already controlled)
+    # Score endpoints WITHOUT business filter and WITHOUT domain filter
+    # (test endpoints are already controlled and properly domain-tagged)
     scored = score_endpoints(
         endpoints=TEST_ENDPOINTS,
         question=question,
         intent=intent,
         domain=domain,
-        apply_business_filter=False,  # Don't filter - all test endpoints are valid
+        apply_business_filter=False,
+        apply_domain_filter=False,  # Don't filter by domain - roles are properly aligned
     )
     
     # Return up to 12 best candidates

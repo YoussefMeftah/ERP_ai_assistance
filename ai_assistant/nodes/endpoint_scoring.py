@@ -130,6 +130,7 @@ def score_endpoints(
     intent: str,
     domain: str,
     apply_business_filter: bool = True,
+    apply_domain_filter: bool = True,
 ) -> List[Dict[str, Any]]:
     """Score and rank endpoints by relevance to question.
     
@@ -139,6 +140,7 @@ def score_endpoints(
         intent: Classified intent
         domain: Classified domain
         apply_business_filter: Whether to filter out non-business endpoints
+        apply_domain_filter: Whether to apply strict domain matching (for test endpoints, set False)
     
     Returns:
         Sorted list of endpoints with scores (highest first)
@@ -152,8 +154,8 @@ def score_endpoints(
         if apply_business_filter and not is_supported_business_endpoint(ep):
             continue
         
-        # Filter by domain for Swagger-generated endpoints
-        if str(ep.get("id", "")).startswith("webapi_get_"):
+        # Filter by domain for Swagger-generated endpoints (can be disabled for test endpoints)
+        if apply_domain_filter and str(ep.get("id", "")).startswith("webapi_get_"):
             role = ep.get("role", "general")
             if domain != "general" and role not in {domain, "general"}:
                 continue
