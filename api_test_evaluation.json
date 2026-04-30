@@ -1,0 +1,495 @@
+{
+  "description": "Evaluation dataset - Natural language prompts paired with expected outputs (endpoint + parameters). Used for LangSmith evaluation to measure endpoint selection accuracy and parameter extraction quality.",
+  "evaluation_cases": [
+    {
+      "prompt": "Afficher les ventes du 01/01/2024 au 31/12/2024",
+      "expected": {
+        "endpoint": "/api/StatsVente/StatsVente",
+        "extracted_params": {
+          "DateDebut": "2024-01-01",
+          "DateFin": "2024-12-31"
+        },
+        "intent": "AGGREGATE",
+        "domain": "commercial"
+      }
+    },
+    {
+      "prompt": "Show me sales statistics for the entire year 2024",
+      "expected": {
+        "endpoint": "/api/StatsVente/StatsVente",
+        "extracted_params": {
+          "DateDebut": "2024-01-01",
+          "DateFin": "2024-12-31"
+        },
+        "intent": "AGGREGATE",
+        "domain": "commercial"
+      }
+    },
+    {
+      "prompt": "Get total sales from January 1st to December 31st, 2024",
+      "expected": {
+        "endpoint": "/api/StatsVente/StatsVente",
+        "extracted_params": {
+          "DateDebut": "2024-01-01",
+          "DateFin": "2024-12-31"
+        },
+        "intent": "AGGREGATE",
+        "domain": "commercial"
+      }
+    },
+    {
+      "prompt": "Quels sont les chiffres de ventes pour l'année 2024?",
+      "expected": {
+        "endpoint": "/api/StatsVente/StatsVente",
+        "extracted_params": {
+          "DateDebut": "2024-01-01",
+          "DateFin": "2024-12-31"
+        },
+        "intent": "AGGREGATE",
+        "domain": "commercial"
+      }
+    },
+    {
+      "prompt": "Statistiques des ventes pour la période 2024-01-01 à 2024-12-31",
+      "expected": {
+        "endpoint": "/api/StatsVente/StatsVente",
+        "extracted_params": {
+          "DateDebut": "2024-01-01",
+          "DateFin": "2024-12-31"
+        },
+        "intent": "AGGREGATE",
+        "domain": "commercial"
+      }
+    },
+    {
+      "prompt": "Show me purchases statistics for 2024",
+      "expected": {
+        "endpoint": "/api/StatsVente/StatsAchats",
+        "extracted_params": {
+          "DateDebut": "2024-01-01",
+          "DateFin": "2024-12-31"
+        },
+        "intent": "AGGREGATE",
+        "domain": "achat"
+      }
+    },
+    {
+      "prompt": "Afficher les statistiques d'achats du 1er janvier au 31 décembre 2024",
+      "expected": {
+        "endpoint": "/api/StatsVente/StatsAchats",
+        "extracted_params": {
+          "DateDebut": "2024-01-01",
+          "DateFin": "2024-12-31"
+        },
+        "intent": "AGGREGATE",
+        "domain": "achat"
+      }
+    },
+    {
+      "prompt": "Get purchase data for the full year 2024",
+      "expected": {
+        "endpoint": "/api/StatsVente/StatsAchats",
+        "extracted_params": {
+          "DateDebut": "2024-01-01",
+          "DateFin": "2024-12-31"
+        },
+        "intent": "AGGREGATE",
+        "domain": "achat"
+      }
+    },
+    {
+      "prompt": "Quels sont les statistiques d'achats pour 2024?",
+      "expected": {
+        "endpoint": "/api/StatsVente/StatsAchats",
+        "extracted_params": {
+          "DateDebut": "2024-01-01",
+          "DateFin": "2024-12-31"
+        },
+        "intent": "AGGREGATE",
+        "domain": "achat"
+      }
+    },
+    {
+      "prompt": "Purchases report from 2024-01-01 to 2024-12-31",
+      "expected": {
+        "endpoint": "/api/StatsVente/StatsAchats",
+        "extracted_params": {
+          "DateDebut": "2024-01-01",
+          "DateFin": "2024-12-31"
+        },
+        "intent": "AGGREGATE",
+        "domain": "achat"
+      }
+    },
+    {
+      "prompt": "Afficher les statistiques de paiements du 01/01/2024 au 31/03/2024",
+      "expected": {
+        "endpoint": "/api/StatsVente/StatsPaiements",
+        "extracted_params": {
+          "DateDebut": "2024-01-01",
+          "DateFin": "2024-03-31",
+          "IsFrs": false
+        },
+        "intent": "AGGREGATE",
+        "domain": "finance"
+      }
+    },
+    {
+      "prompt": "Show me payment statistics for Q1 2024",
+      "expected": {
+        "endpoint": "/api/StatsVente/StatsPaiements",
+        "extracted_params": {
+          "DateDebut": "2024-01-01",
+          "DateFin": "2024-03-31",
+          "IsFrs": false
+        },
+        "intent": "AGGREGATE",
+        "domain": "finance"
+      }
+    },
+    {
+      "prompt": "Get payment data from January to March 2024",
+      "expected": {
+        "endpoint": "/api/StatsVente/StatsPaiements",
+        "extracted_params": {
+          "DateDebut": "2024-01-01",
+          "DateFin": "2024-03-31",
+          "IsFrs": false
+        },
+        "intent": "AGGREGATE",
+        "domain": "finance"
+      }
+    },
+    {
+      "prompt": "Quels sont les paiements effectués au premier trimestre 2024?",
+      "expected": {
+        "endpoint": "/api/StatsVente/StatsPaiements",
+        "extracted_params": {
+          "DateDebut": "2024-01-01",
+          "DateFin": "2024-03-31",
+          "IsFrs": false
+        },
+        "intent": "AGGREGATE",
+        "domain": "finance"
+      }
+    },
+    {
+      "prompt": "Payment statistics for the period 2024-01-01 to 2024-03-31",
+      "expected": {
+        "endpoint": "/api/StatsVente/StatsPaiements",
+        "extracted_params": {
+          "DateDebut": "2024-01-01",
+          "DateFin": "2024-03-31",
+          "IsFrs": false
+        },
+        "intent": "AGGREGATE",
+        "domain": "finance"
+      }
+    },
+    {
+      "prompt": "List all product families",
+      "expected": {
+        "endpoint": "/api/StockDepot/GetAllFamille",
+        "extracted_params": {},
+        "intent": "GET",
+        "domain": "stock"
+      }
+    },
+    {
+      "prompt": "Afficher toutes les familles de produits disponibles",
+      "expected": {
+        "endpoint": "/api/StockDepot/GetAllFamille",
+        "extracted_params": {},
+        "intent": "GET",
+        "domain": "stock"
+      }
+    },
+    {
+      "prompt": "Get the complete list of product families",
+      "expected": {
+        "endpoint": "/api/StockDepot/GetAllFamille",
+        "extracted_params": {},
+        "intent": "GET",
+        "domain": "stock"
+      }
+    },
+    {
+      "prompt": "Quelles sont toutes les familles de produits?",
+      "expected": {
+        "endpoint": "/api/StockDepot/GetAllFamille",
+        "extracted_params": {},
+        "intent": "GET",
+        "domain": "stock"
+      }
+    },
+    {
+      "prompt": "Show me all the product families in the system",
+      "expected": {
+        "endpoint": "/api/StockDepot/GetAllFamille",
+        "extracted_params": {},
+        "intent": "GET",
+        "domain": "stock"
+      }
+    },
+    {
+      "prompt": "Afficher toutes les familles de produits P",
+      "expected": {
+        "endpoint": "/api/StockDepot/GetAllFamilleP",
+        "extracted_params": {},
+        "intent": "GET",
+        "domain": "stock"
+      }
+    },
+    {
+      "prompt": "Get all product families P",
+      "expected": {
+        "endpoint": "/api/StockDepot/GetAllFamilleP",
+        "extracted_params": {},
+        "intent": "GET",
+        "domain": "stock"
+      }
+    },
+    {
+      "prompt": "Show me all P variant product families",
+      "expected": {
+        "endpoint": "/api/StockDepot/GetAllFamilleP",
+        "extracted_params": {},
+        "intent": "GET",
+        "domain": "stock"
+      }
+    },
+    {
+      "prompt": "Quelles sont les familles de produits P?",
+      "expected": {
+        "endpoint": "/api/StockDepot/GetAllFamilleP",
+        "extracted_params": {},
+        "intent": "GET",
+        "domain": "stock"
+      }
+    },
+    {
+      "prompt": "List all available P product families",
+      "expected": {
+        "endpoint": "/api/StockDepot/GetAllFamilleP",
+        "extracted_params": {},
+        "intent": "GET",
+        "domain": "stock"
+      }
+    },
+    {
+      "prompt": "Get depot information",
+      "expected": {
+        "endpoint": "/api/StockDepot/GetDepot",
+        "extracted_params": {},
+        "intent": "GET",
+        "domain": "stock"
+      }
+    },
+    {
+      "prompt": "Afficher les informations du depot",
+      "expected": {
+        "endpoint": "/api/StockDepot/GetDepot",
+        "extracted_params": {},
+        "intent": "GET",
+        "domain": "stock"
+      }
+    },
+    {
+      "prompt": "Show me depot details",
+      "expected": {
+        "endpoint": "/api/StockDepot/GetDepot",
+        "extracted_params": {},
+        "intent": "GET",
+        "domain": "stock"
+      }
+    },
+    {
+      "prompt": "Quelles sont les informations du depot?",
+      "expected": {
+        "endpoint": "/api/StockDepot/GetDepot",
+        "extracted_params": {},
+        "intent": "GET",
+        "domain": "stock"
+      }
+    },
+    {
+      "prompt": "Get all depot information",
+      "expected": {
+        "endpoint": "/api/StockDepot/GetDepot",
+        "extracted_params": {},
+        "intent": "GET",
+        "domain": "stock"
+      }
+    },
+    {
+      "prompt": "Afficher les lots de stock du depot A avec code article ABC123",
+      "expected": {
+        "endpoint": "/odata/StockLotOdata",
+        "extracted_params": {
+          "cod_dep": "A",
+          "cod_art": "ABC123"
+        },
+        "intent": "FILTER",
+        "domain": "stock"
+      }
+    },
+    {
+      "prompt": "Get stock lots from depot A for article ABC123",
+      "expected": {
+        "endpoint": "/odata/StockLotOdata",
+        "extracted_params": {
+          "cod_dep": "A",
+          "cod_art": "ABC123"
+        },
+        "intent": "FILTER",
+        "domain": "stock"
+      }
+    },
+    {
+      "prompt": "Show me stock lots in warehouse A with article code ABC123",
+      "expected": {
+        "endpoint": "/odata/StockLotOdata",
+        "extracted_params": {
+          "cod_dep": "A",
+          "cod_art": "ABC123"
+        },
+        "intent": "FILTER",
+        "domain": "stock"
+      }
+    },
+    {
+      "prompt": "Quels sont les lots du stock du depot A pour l'article ABC123?",
+      "expected": {
+        "endpoint": "/odata/StockLotOdata",
+        "extracted_params": {
+          "cod_dep": "A",
+          "cod_art": "ABC123"
+        },
+        "intent": "FILTER",
+        "domain": "stock"
+      }
+    },
+    {
+      "prompt": "List stock lots in depot A for product ABC123",
+      "expected": {
+        "endpoint": "/odata/StockLotOdata",
+        "extracted_params": {
+          "cod_dep": "A",
+          "cod_art": "ABC123"
+        },
+        "intent": "FILTER",
+        "domain": "stock"
+      }
+    },
+    {
+      "prompt": "Get articles for client code CLT001",
+      "expected": {
+        "endpoint": "/odata/ArticleOdata",
+        "extracted_params": {
+          "cod_clt": "CLT001"
+        },
+        "intent": "GET",
+        "domain": "commercial"
+      }
+    },
+    {
+      "prompt": "Afficher les articles du client CLT001",
+      "expected": {
+        "endpoint": "/odata/ArticleOdata",
+        "extracted_params": {
+          "cod_clt": "CLT001"
+        },
+        "intent": "GET",
+        "domain": "commercial"
+      }
+    },
+    {
+      "prompt": "Show me all articles for customer CLT001",
+      "expected": {
+        "endpoint": "/odata/ArticleOdata",
+        "extracted_params": {
+          "cod_clt": "CLT001"
+        },
+        "intent": "GET",
+        "domain": "commercial"
+      }
+    },
+    {
+      "prompt": "Quels sont les articles associés au client CLT001?",
+      "expected": {
+        "endpoint": "/odata/ArticleOdata",
+        "extracted_params": {
+          "cod_clt": "CLT001"
+        },
+        "intent": "GET",
+        "domain": "commercial"
+      }
+    },
+    {
+      "prompt": "List articles for client CLT001",
+      "expected": {
+        "endpoint": "/odata/ArticleOdata",
+        "extracted_params": {
+          "cod_clt": "CLT001"
+        },
+        "intent": "GET",
+        "domain": "commercial"
+      }
+    },
+    {
+      "prompt": "Get client order number BL2024001",
+      "expected": {
+        "endpoint": "/api/BlClient/GetById",
+        "extracted_params": {
+          "num_bl_clt": "BL2024001"
+        },
+        "intent": "GET",
+        "domain": "commercial"
+      }
+    },
+    {
+      "prompt": "Afficher la commande client numéro BL2024001",
+      "expected": {
+        "endpoint": "/api/BlClient/GetById",
+        "extracted_params": {
+          "num_bl_clt": "BL2024001"
+        },
+        "intent": "GET",
+        "domain": "commercial"
+      }
+    },
+    {
+      "prompt": "Show me client order BL2024001",
+      "expected": {
+        "endpoint": "/api/BlClient/GetById",
+        "extracted_params": {
+          "num_bl_clt": "BL2024001"
+        },
+        "intent": "GET",
+        "domain": "commercial"
+      }
+    },
+    {
+      "prompt": "Quelle est la commande client BL2024001?",
+      "expected": {
+        "endpoint": "/api/BlClient/GetById",
+        "extracted_params": {
+          "num_bl_clt": "BL2024001"
+        },
+        "intent": "GET",
+        "domain": "commercial"
+      }
+    },
+    {
+      "prompt": "Retrieve client order BL2024001",
+      "expected": {
+        "endpoint": "/api/BlClient/GetById",
+        "extracted_params": {
+          "num_bl_clt": "BL2024001"
+        },
+        "intent": "GET",
+        "domain": "commercial"
+      }
+    }
+  ]
+}

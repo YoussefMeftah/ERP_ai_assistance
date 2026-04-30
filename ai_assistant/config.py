@@ -9,6 +9,18 @@ import json
 from pathlib import Path
 from typing import Dict, Any, Optional, List
 
+# Load environment variables from .env file
+try:
+    from dotenv import load_dotenv
+    
+    # Load .env from project root
+    env_file = Path(__file__).resolve().parent.parent / ".env"
+    if env_file.exists():
+        load_dotenv(env_file)
+except ImportError:
+    # python-dotenv not installed, continue with os.getenv
+    pass
+
 
 class Config:
     """Central configuration for the ERP Assistant system."""
@@ -174,6 +186,28 @@ class Config:
     def mongodb_staging_threshold() -> int:
         """Threshold: if API result > N records, save to MongoDB."""
         return int(os.getenv("MONGODB_STAGING_THRESHOLD", "50"))
+    
+    # ========== LangSmith Configuration ==========
+    @staticmethod
+    def langsmith_api_key() -> Optional[str]:
+        """LangSmith API key for evaluation and tracing."""
+        api_key = os.getenv("LANGSMITH_API_KEY", "").strip()
+        return api_key if api_key else None
+    
+    @staticmethod
+    def langsmith_project_name() -> str:
+        """LangSmith project name for evaluations."""
+        return os.getenv("LANGSMITH_PROJECT_NAME", "endpoint_selection_evaluation_v2")
+    
+    @staticmethod
+    def langsmith_dataset_name() -> str:
+        """LangSmith dataset name for evaluations."""
+        return os.getenv("LANGSMITH_DATASET_NAME", "endpoint_selection_test_cases")
+    
+    @staticmethod
+    def langsmith_endpoint() -> str:
+        """LangSmith API endpoint URL."""
+        return os.getenv("LANGSMITH_ENDPOINT", "https://api.smith.langchain.com")
     
     # ========== HTTP Server Configuration ==========
     @staticmethod

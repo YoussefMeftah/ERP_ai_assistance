@@ -35,3 +35,8 @@ build/
 ### Airflow ###
 .env.airflow
 airflow/logs/
+
+### Environment Variables ###
+.env
+.env.local
+.env.*.local

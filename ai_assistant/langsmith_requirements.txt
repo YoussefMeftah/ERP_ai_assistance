@@ -1,0 +1,24 @@
+# LangSmith Evaluation Requirements
+# Add these to your existing requirements.txt
+
+# Core LangSmith & Evaluation
+langsmith>=0.1.0
+langgraph>=0.0.1
+langchain>=0.1.0
+
+# Async & Concurrency
+aiohttp>=3.8.0
+asyncio-contextmanager>=1.0.0
+
+# Data Processing & Analysis
+pandas>=1.5.0
+numpy>=1.24.0
+
+# Utilities
+python-dotenv>=1.0.0
+pydantic>=2.0.0
+pydantic-settings>=2.0.0
+
+# Optional: For advanced reporting
+jinja2>=3.1.0
+markdown>=3.4.0

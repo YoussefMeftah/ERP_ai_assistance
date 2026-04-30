@@ -61,7 +61,8 @@ def call_ollama_json(
 ) -> Optional[Dict[str, Any]]:
     """Call Ollama and expect JSON response.
     
-    Automatically handles JSON extraction from wrapped responses (```json...```).
+    Automatically handles JSON extraction from wrapped responses (```json...```) 
+    embedded in narrative text.
     
     Args:
         model: Model name
@@ -79,20 +80,40 @@ def call_ollama_json(
         print(f"[DEBUG] Raw response from {model}:")
         print(f"  Length: {len(raw)} chars")
         print(f"  First 200 chars: {raw[:200]!r}")
-        print(f"  Full response: {raw!r}")
     
-    # Clean markdown fence wrappers
+    # Strategy 1: Look for ```json...``` blocks (may be embedded in narrative)
+    import re
+    json_blocks = re.findall(r'```json\s*(.*?)\s*```', raw, re.DOTALL)
+    
+    if json_blocks:
+        if debug:
+            print(f"[DEBUG] Found {len(json_blocks)} JSON block(s) in response")
+        
+        for idx, block in enumerate(json_blocks):
+            try:
+                data = json.loads(block.strip())
+                if isinstance(data, dict):
+                    if debug:
+                        print(f"[DEBUG] Successfully parsed JSON block {idx+1}")
+                    return data
+            except json.JSONDecodeError as e:
+                if debug:
+                    print(f"[DEBUG] Block {idx+1} parse error: {e}")
+                continue
+    
+    # Strategy 2: Clean markdown fence wrappers (for responses starting with JSON)
     cleaned = raw.strip()
     cleaned = cleaned.removeprefix("```json").removeprefix("```").removesuffix("```").strip()
     
     try:
         data = json.loads(cleaned)
         if isinstance(data, dict):
+            if debug:
+                print(f"[DEBUG] Successfully parsed cleaned response")
             return data
     except json.JSONDecodeError as e:
         if debug:
-            print(f"[DEBUG] JSON parse error: {e}")
-            print(f"[DEBUG] Cleaned text: {cleaned!r}")
+            print(f"[DEBUG] Cleaned text parse error: {e}")
         return None
     
     return None

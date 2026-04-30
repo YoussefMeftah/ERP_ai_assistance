@@ -1,0 +1,122 @@
+{
+  "description": "Test prompts dataset - 5 prompts for each endpoint in api_test.json. Used for testing prompt engineering and LLM prompt generation.",
+  "prompts": [
+    {
+      "endpoint": "/api/StatsVente/StatsVente",
+      "domain": "commercial",
+      "intent": "AGGREGATE",
+      "parameter_keys": ["DateDebut", "DateFin", "commercialCategory"],
+      "prompts": [
+        "Afficher les ventes du 01/01/2024 au 31/12/2024",
+        "Show me sales statistics for the entire year 2024",
+        "Get total sales from January 1st to December 31st, 2024",
+        "Quels sont les chiffres de ventes pour l'année 2024?",
+        "Statistiques des ventes pour la période 2024-01-01 à 2024-12-31"
+      ]
+    },
+    {
+      "endpoint": "/api/StatsVente/StatsAchats",
+      "domain": "achat",
+      "intent": "AGGREGATE",
+      "parameter_keys": ["DateDebut", "DateFin", "commercialCategory"],
+      "prompts": [
+        "Show me purchases statistics for 2024",
+        "Afficher les statistiques d'achats du 1er janvier au 31 décembre 2024",
+        "Get purchase data for the full year 2024",
+        "Quels sont les statistiques d'achats pour 2024?",
+        "Purchases report from 2024-01-01 to 2024-12-31"
+      ]
+    },
+    {
+      "endpoint": "/api/StatsVente/StatsPaiements",
+      "domain": "finance",
+      "intent": "AGGREGATE",
+      "parameter_keys": ["DateDebut", "DateFin", "IsFrs", "paiementCategory"],
+      "prompts": [
+        "Afficher les statistiques de paiements du 01/01/2024 au 31/03/2024",
+        "Show me payment statistics for Q1 2024",
+        "Get payment data from January to March 2024",
+        "Quels sont les paiements effectués au premier trimestre 2024?",
+        "Payment statistics for the period 2024-01-01 to 2024-03-31"
+      ]
+    },
+    {
+      "endpoint": "/api/StockDepot/GetAllFamille",
+      "domain": "stock",
+      "intent": "GET",
+      "parameter_keys": [],
+      "prompts": [
+        "List all product families",
+        "Afficher toutes les familles de produits disponibles",
+        "Get the complete list of product families",
+        "Quelles sont toutes les familles de produits?",
+        "Show me all the product families in the system"
+      ]
+    },
+    {
+      "endpoint": "/api/StockDepot/GetAllFamilleP",
+      "domain": "stock",
+      "intent": "GET",
+      "parameter_keys": [],
+      "prompts": [
+        "Afficher toutes les familles de produits P",
+        "Get all product families P",
+        "Show me all P variant product families",
+        "Quelles sont les familles de produits P?",
+        "List all available P product families"
+      ]
+    },
+    {
+      "endpoint": "/api/StockDepot/GetDepot",
+      "domain": "stock",
+      "intent": "GET",
+      "parameter_keys": [],
+      "prompts": [
+        "Get depot information",
+        "Afficher les informations du depot",
+        "Show me depot details",
+        "Quelles sont les informations du depot?",
+        "Get all depot information"
+      ]
+    },
+    {
+      "endpoint": "/odata/StockLotOdata",
+      "domain": "stock",
+      "intent": "FILTER",
+      "parameter_keys": ["cod_dep", "num_lot", "etat", "cod_art", "desg_art"],
+      "prompts": [
+        "Afficher les lots de stock du depot A avec code article ABC123",
+        "Get stock lots from depot A for article ABC123",
+        "Show me stock lots in warehouse A with article code ABC123",
+        "Quels sont les lots du stock du depot A pour l'article ABC123?",
+        "List stock lots in depot A for product ABC123"
+      ]
+    },
+    {
+      "endpoint": "/odata/ArticleOdata",
+      "domain": "commercial",
+      "intent": "GET",
+      "parameter_keys": ["cod_clt"],
+      "prompts": [
+        "Get articles for client code CLT001",
+        "Afficher les articles du client CLT001",
+        "Show me all articles for customer CLT001",
+        "Quels sont les articles associés au client CLT001?",
+        "List articles for client CLT001"
+      ]
+    },
+    {
+      "endpoint": "/api/BlClient/GetById",
+      "domain": "commercial",
+      "intent": "GET",
+      "parameter_keys": ["num_bl_clt"],
+      "prompts": [
+        "Get client order number BL2024001",
+        "Afficher la commande client numéro BL2024001",
+        "Show me client order BL2024001",
+        "Quelle est la commande client BL2024001?",
+        "Retrieve client order BL2024001"
+      ]
+    }
+  ]
+}

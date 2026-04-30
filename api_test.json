@@ -1,0 +1,252 @@
+{
+  "openapi": "3.0.1",
+  "info": {
+    "title": "HTSOFT NEO WEB-API",
+    "version": "v1"
+  },
+  "paths": {
+    "/api/StatsVente/StatsVente": {
+      "get": {
+        "tags": ["StatsVente"],
+        "parameters": [
+          {
+            "name": "DateDebut",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          },
+          {
+            "name": "DateFin",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          },
+          {
+            "name": "commercialCategory",
+            "in": "query",
+            "schema": {
+              "$ref": "#/components/schemas/CommercialCategory"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/StatsVente/StatsAchats": {
+      "get": {
+        "tags": ["StatsVente"],
+        "parameters": [
+          {
+            "name": "DateDebut",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          },
+          {
+            "name": "DateFin",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          },
+          {
+            "name": "commercialCategory",
+            "in": "query",
+            "schema": {
+              "$ref": "#/components/schemas/CommercialCategory"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/StatsVente/StatsPaiements": {
+      "get": {
+        "tags": ["StatsVente"],
+        "parameters": [
+          {
+            "name": "DateDebut",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          },
+          {
+            "name": "DateFin",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          },
+          {
+            "name": "IsFrs",
+            "in": "query",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "paiementCategory",
+            "in": "query",
+            "schema": {
+              "$ref": "#/components/schemas/PaiementCategory"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/StockDepot/GetAllFamille": {
+      "get": {
+        "tags": ["Stock"],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/StockDepot/GetAllFamilleP": {
+      "get": {
+        "tags": ["Stock"],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/StockDepot/GetDepot": {
+      "get": {
+        "tags": ["Stock"],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/odata/StockLotOdata": {
+      "get": {
+        "tags": ["StockLotOdata"],
+        "operationId": "odata/StockLotOdata",
+        "parameters": [
+          {
+            "name": "cod_dep",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "num_lot",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "etat",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "cod_art",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "desg_art",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/odata/ArticleOdata": {
+      "get": {
+        "tags": ["ArticleOdata"],
+        "operationId": "odata/ArticleOdata",
+        "parameters": [
+          {
+            "name": "cod_clt",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/BlClient/GetById": {
+      "get": {
+        "tags": ["BlClient"],
+        "parameters": [
+          {
+            "name": "num_bl_clt",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "CommercialCategory": {
+        "type": "integer",
+        "format": "int32",
+        "enum": [0, 1, 2, 4, 8, 16, 32]
+      },
+      "PaiementCategory": {
+        "type": "integer",
+        "format": "int32",
+        "enum": [0, 1, 2, 4, 8]
+      }
+    }
+  ]
+}
