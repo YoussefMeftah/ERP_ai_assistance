@@ -70,7 +70,7 @@ def load_test_endpoints_from_api_test() -> List[Dict[str, Any]]:
     """
     Load endpoint definitions from api_test.json for evaluation.
     
-    Uses controlled test endpoints instead of live Swagger endpoints.
+    Converts OpenAPI 3.0.1 spec to endpoint definitions.
     
     Returns:
         List of endpoint definitions from api_test.json
@@ -81,11 +81,57 @@ def load_test_endpoints_from_api_test() -> List[Dict[str, Any]]:
     
     try:
         with open(API_TEST_JSON_PATH, 'r', encoding='utf-8') as f:
-            data = json.load(f)
+            spec = json.load(f)
         
-        endpoints = data.get("endpoints", [])
+        # Convert OpenAPI spec to endpoints
+        endpoints = []
+        paths = spec.get("paths", {})
+        
+        for path, methods in paths.items():
+            if not isinstance(methods, dict):
+                continue
+            
+            for method, operation in methods.items():
+                if method not in ["get", "post", "put", "delete", "patch"]:
+                    continue
+                
+                # Extract operation info
+                tags = operation.get("tags", ["general"])
+                tag = tags[0] if tags else "general"
+                
+                # Extract parameters
+                parameters = operation.get("parameters", [])
+                param_details = {}
+                required_params = []
+                
+                for param in parameters:
+                    param_name = param.get("name", "")
+                    if param_name:
+                        param_details[param_name] = {
+                            "type": param.get("schema", {}).get("type", "string"),
+                            "in": param.get("in", "query"),
+                            "required": param.get("required", False),
+                            "description": param.get("description", "")
+                        }
+                        if param.get("required", False) or param.get("in") == "path":
+                            required_params.append(param_name)
+                
+                # Create endpoint definition
+                endpoint = {
+                    "id": f"webapi_{method.lower()}_{path.lower().replace('/', '_').replace('-', '_')}",
+                    "path": path,
+                    "method": method.upper(),
+                    "tags": [tag],
+                    "description": operation.get("summary", operation.get("description", "")),
+                    "parameters": param_details,
+                    "required_parameters": required_params,
+                    "keywords": [tag.lower()]
+                }
+                
+                endpoints.append(endpoint)
+        
         if endpoints:
-            print(f"✅ Loaded {len(endpoints)} test endpoints from api_test.json")
+            print(f"✅ Loaded {len(endpoints)} test endpoints from api_test.json (OpenAPI spec)")
             return endpoints
         else:
             print(f"⚠️  No endpoints found in api_test.json")
@@ -223,8 +269,17 @@ class EndpointExactMatchEvaluator(StringEvaluator):
     def __init__(self, **kwargs):
         """Initialize with default grading function."""
         if 'grading_function' not in kwargs:
-            kwargs['grading_function'] = self.evaluate_strings
+            kwargs['grading_function'] = self._evaluate_strings
         super().__init__(**kwargs)
+    
+    def _evaluate_strings(
+        self,
+        prediction: str,
+        reference: str,
+        **kwargs
+    ) -> Dict[str, Any]:
+        """Wrapper to match LangSmith StringEvaluator interface."""
+        return self.evaluate_strings(prediction, reference, **kwargs)
     
     def evaluate_strings(
         self,
@@ -294,8 +349,17 @@ class ParameterExtractionEvaluator(StringEvaluator):
     def __init__(self, **kwargs):
         """Initialize with default grading function."""
         if 'grading_function' not in kwargs:
-            kwargs['grading_function'] = self.evaluate_strings
+            kwargs['grading_function'] = self._evaluate_strings
         super().__init__(**kwargs)
+    
+    def _evaluate_strings(
+        self,
+        prediction: str,
+        reference: str,
+        **kwargs
+    ) -> Dict[str, Any]:
+        """Wrapper to match LangSmith StringEvaluator interface."""
+        return self.evaluate_strings(prediction, reference, **kwargs)
     
     def evaluate_strings(
         self,
@@ -417,8 +481,17 @@ class IntentClassificationEvaluator(StringEvaluator):
     def __init__(self, **kwargs):
         """Initialize with default grading function."""
         if 'grading_function' not in kwargs:
-            kwargs['grading_function'] = self.evaluate_strings
+            kwargs['grading_function'] = self._evaluate_strings
         super().__init__(**kwargs)
+    
+    def _evaluate_strings(
+        self,
+        prediction: str,
+        reference: str,
+        **kwargs
+    ) -> Dict[str, Any]:
+        """Wrapper to match LangSmith StringEvaluator interface."""
+        return self.evaluate_strings(prediction, reference, **kwargs)
     
     def evaluate_strings(
         self,
@@ -464,8 +537,17 @@ class DomainClassificationEvaluator(StringEvaluator):
     def __init__(self, **kwargs):
         """Initialize with default grading function."""
         if 'grading_function' not in kwargs:
-            kwargs['grading_function'] = self.evaluate_strings
+            kwargs['grading_function'] = self._evaluate_strings
         super().__init__(**kwargs)
+    
+    def _evaluate_strings(
+        self,
+        prediction: str,
+        reference: str,
+        **kwargs
+    ) -> Dict[str, Any]:
+        """Wrapper to match LangSmith StringEvaluator interface."""
+        return self.evaluate_strings(prediction, reference, **kwargs)
     
     def evaluate_strings(
         self,
