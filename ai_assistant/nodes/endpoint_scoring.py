@@ -59,6 +59,7 @@ def compute_endpoint_score(
         - Intent match (GET vs AGGREGATE)
         - Domain role match (commercial, stock, etc.)
         - URL patterns (getall, list, odata bonus)
+        - Keyword-specific bonuses (achat > vente for purchase questions, etc.)
         - Special handling for specific endpoints
     
     Args:
@@ -71,7 +72,7 @@ def compute_endpoint_score(
     Returns:
         Relevance score
     """
-    ep_keywords = [str(kw) for kw in endpoint.get("keywords", [])]
+    ep_keywords = [str(kw).lower() for kw in endpoint.get("keywords", [])]
     ep_text = " ".join([
         str(endpoint.get("id", "")),
         str(endpoint.get("url", "")),
@@ -105,10 +106,25 @@ def compute_endpoint_score(
     if contains_any(ep_text, ["generate-test", "generatetest", "/test", "debug"]):
         score -= 20
     
+    # Keyword-specific matching bonuses (high priority for StatsAchats, StatsPaiements)
+    if contains_any(question, ["achat", "achats"]):
+        if contains_any(ep_text, ["achat", "achats", "statsachats"]):
+            score += 10  # Strong bonus for purchase questions
+        elif contains_any(ep_text, ["vente", "ventes", "statsvente"]):
+            score -= 5  # Penalty if StatsVente selected instead of StatsAchats
+    
+    if contains_any(question, ["paiement", "paiements", "reglement", "règlement", "versement"]):
+        if contains_any(ep_text, ["paiement", "paiements", "statspaiements", "payment", "payments"]):
+            score += 10  # Strong bonus for payment questions
+        elif contains_any(ep_text, ["vente", "ventes", "statsvente"]):
+            score -= 5  # Penalty if StatsVente selected instead of StatsPaiements
+    
     # Sales/statistics specific
     if contains_any(question, ["vente", "ventes", "statistique", "statistiques", "chiffre", "ca", "rapport"]):
-        if contains_any(ep_text, ["vente", "ventes", "statsvente", "report", "reports", "commande_client", "fact"]):
-            score += 6
+        # Only apply vente bonus if NOT achat/paiement
+        if not contains_any(question, ["achat", "achats", "paiement", "paiements"]):
+            if contains_any(ep_text, ["vente", "ventes", "statsvente", "report", "reports", "commande_client", "fact"]):
+                score += 6
         if contains_any(ep_text, ["client/getallclients", "get_clients", "blclient/getallclients"]):
             score -= 4
     
@@ -117,9 +133,6 @@ def compute_endpoint_score(
         score += 3
     if contains_any(question, ["stock", "inventaire"]) and contains_any(ep_text, ["stock", "depot", "article"]):
         score += 5
-    if contains_any(question, ["paiement", "paiements", "reglement", "règlement"]):
-        if contains_any(ep_text, ["paiement", "payments", "fact"]):
-            score += 5
     
     return score
 
