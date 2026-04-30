@@ -309,8 +309,9 @@ class BatchEvaluationRunner:
                         evaluator_name = evaluator.__class__.__name__
                         
                         if "Endpoint" in evaluator_name:
-                            # EndpointExactMatchEvaluator: compare endpoint names
-                            pred_value = str(pred.get("endpoint_name", ""))
+                            # EndpointExactMatchEvaluator: compare endpoint paths
+                            # Use path instead of ID since test cases expect paths
+                            pred_value = str(pred.get("endpoint_path", ""))
                             expected_value = str(expected.get("endpoint", ""))
                         elif "Parameter" in evaluator_name:
                             # ParameterExtractionEvaluator: compare extracted_params

@@ -663,9 +663,20 @@ async def run_test_case_async(
             }
         )
         
+        # Get endpoint ID
+        endpoint_id = result.get("selected_endpoint", {}).get("id", "UNKNOWN")
+        
+        # Look up endpoint path from TEST_ENDPOINTS
+        endpoint_path = "UNKNOWN"
+        for endpoint in TEST_ENDPOINTS:
+            if endpoint.get("id") == endpoint_id:
+                endpoint_path = endpoint.get("path", "UNKNOWN")
+                break
+        
         # Extract relevant outputs
         return {
-            "endpoint_name": result.get("selected_endpoint", {}).get("id", "UNKNOWN"),
+            "endpoint_name": endpoint_id,
+            "endpoint_path": endpoint_path,  # Add path for comparison
             "endpoint_keywords": result.get("selected_endpoint", {}).get("keywords", []),
             "extracted_params": result.get("extracted_params", {}),
             "intent": result.get("intent", "GET"),
@@ -676,6 +687,7 @@ async def run_test_case_async(
         print(f"❌ Error running test case: {e}")
         return {
             "endpoint_name": "ERROR",
+            "endpoint_path": "ERROR",
             "extracted_params": {},
             "intent": "GET",
             "domain": "general",
