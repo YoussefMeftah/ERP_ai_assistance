@@ -70,11 +70,14 @@ def load_test_endpoints_from_api_test() -> List[Dict[str, Any]]:
     """
     Load endpoint definitions from api_test.json for evaluation.
     
-    Converts OpenAPI 3.0.1 spec to endpoint definitions.
+    Converts OpenAPI 3.0.1 spec to endpoint definitions with proper keyword extraction.
     
     Returns:
         List of endpoint definitions from api_test.json
     """
+    # Import here to avoid circular imports
+    from utils.endpoint_loader import path_to_keywords
+    
     if not API_TEST_JSON_PATH.exists():
         print(f"❌ api_test.json not found at {API_TEST_JSON_PATH}")
         return []
@@ -116,6 +119,11 @@ def load_test_endpoints_from_api_test() -> List[Dict[str, Any]]:
                         if param.get("required", False) or param.get("in") == "path":
                             required_params.append(param_name)
                 
+                # Extract keywords using proper camelCase splitting
+                keywords = path_to_keywords(path)
+                if not keywords:
+                    keywords = [tag.lower()]
+                
                 # Create endpoint definition with all required fields
                 endpoint = {
                     "id": f"webapi_{method.lower()}_{path.lower().replace('/', '_').replace('-', '_')}",
@@ -126,7 +134,7 @@ def load_test_endpoints_from_api_test() -> List[Dict[str, Any]]:
                     "description": operation.get("summary", operation.get("description", "")),
                     "parameters": param_details,
                     "required_parameters": required_params,
-                    "keywords": [tag.lower()],
+                    "keywords": keywords,  # Now using proper keyword extraction
                     "role": tag.lower() if tag and tag.lower() != "general" else "commercial",  # Infer role from tag
                     "intent": method.upper()  # Default intent based on method
                 }
@@ -134,7 +142,11 @@ def load_test_endpoints_from_api_test() -> List[Dict[str, Any]]:
                 endpoints.append(endpoint)
         
         if endpoints:
-            print(f"✅ Loaded {len(endpoints)} test endpoints from api_test.json (OpenAPI spec)")
+            print(f"✅ Loaded {len(endpoints)} test endpoints from api_test.json")
+            # Debug: show keyword extraction for first endpoint
+            if endpoints:
+                first = endpoints[0]
+                print(f"  [Example] {first.get('path')} → keywords: {first.get('keywords')}")
             return endpoints
         else:
             print(f"⚠️  No endpoints found in api_test.json")
