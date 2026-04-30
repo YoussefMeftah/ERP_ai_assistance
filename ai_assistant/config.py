@@ -9,17 +9,25 @@ import json
 from pathlib import Path
 from typing import Dict, Any, Optional, List
 
-# Load environment variables from .env file
+# For Colab environment - load secrets via google.colab.userdata
 try:
-    from dotenv import load_dotenv
-    
-    # Load .env from project root
-    env_file = Path(__file__).resolve().parent.parent / ".env"
-    if env_file.exists():
-        load_dotenv(env_file)
+    from google.colab import userdata
+    IN_COLAB = True
 except ImportError:
-    # python-dotenv not installed, continue with os.getenv
-    pass
+    IN_COLAB = False
+
+# Load environment variables from .env file (local development only)
+if not IN_COLAB:
+    try:
+        from dotenv import load_dotenv
+        
+        # Load .env from project root
+        env_file = Path(__file__).resolve().parent.parent / ".env"
+        if env_file.exists():
+            load_dotenv(env_file)
+    except ImportError:
+        # python-dotenv not installed, continue with os.getenv
+        pass
 
 
 class Config:
@@ -190,9 +198,20 @@ class Config:
     # ========== LangSmith Configuration ==========
     @staticmethod
     def langsmith_api_key() -> Optional[str]:
-        """LangSmith API key for evaluation and tracing."""
-        api_key = os.getenv("LANGSMITH_API_KEY", "").strip()
-        return api_key if api_key else None
+        """LangSmith API key for evaluation and tracing.
+        
+        In Colab: Gets from Google Colab Secrets (set via Secrets panel)
+        Locally: Gets from .env file
+        """
+        if IN_COLAB:
+            try:
+                return userdata.get('LANGSMITH_API_KEY')
+            except Exception:
+                return None
+        else:
+            # Local development: use .env file
+            api_key = os.getenv("LANGSMITH_API_KEY", "").strip()
+            return api_key if api_key else None
     
     @staticmethod
     def langsmith_project_name() -> str:
