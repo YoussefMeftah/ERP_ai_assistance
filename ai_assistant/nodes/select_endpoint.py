@@ -332,6 +332,13 @@ def select_endpoint_and_params(state: AssistantState) -> AssistantState:
     
     selected = selected_endpoints[0] if selected_endpoints else fallback_selected
     
+    # Debug: log if selected is None
+    if selected is None:
+        print(f"[DEBUG] ⚠️  selected_endpoint is None!")
+        print(f"[DEBUG]   candidates: {len(candidates)}")
+        print(f"[DEBUG]   selected_endpoints: {selected_endpoints}")
+        print(f"[DEBUG]   fallback_selected: {fallback_selected}")
+    
     return {
         "selected_endpoints": selected_endpoints or [],
         "selected_endpoint": selected,

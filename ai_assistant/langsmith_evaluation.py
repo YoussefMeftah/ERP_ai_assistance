@@ -191,6 +191,7 @@ def retrieve_candidate_endpoints_eval(state: AssistantState) -> AssistantState:
     
     # If no business endpoints found, try without filter
     if not scored:
+        print(f"[DEBUG] No business endpoints passed filter, trying without filter...")
         scored = score_endpoints(
             endpoints=TEST_ENDPOINTS,
             question=question,
@@ -201,7 +202,15 @@ def retrieve_candidate_endpoints_eval(state: AssistantState) -> AssistantState:
     
     # Return up to 12 best candidates
     max_candidates = 12
-    return {"endpoint_candidates": scored[:max_candidates]}
+    candidates = scored[:max_candidates]
+    
+    if not candidates:
+        print(f"[DEBUG] ⚠️  No candidates found for: {question[:50]}...")
+        print(f"[DEBUG]   Question: {question}")
+        print(f"[DEBUG]   Intent: {intent}, Domain: {domain}")
+        print(f"[DEBUG]   TEST_ENDPOINTS: {len(TEST_ENDPOINTS)} available")
+    
+    return {"endpoint_candidates": candidates}
 
 
 # ============================================================================
@@ -666,26 +675,26 @@ async def run_test_case_async(
             }
         )
         
-        # Get endpoint ID
-        endpoint_id = result.get("selected_endpoint", {}).get("id", "UNKNOWN")
-        selected_endpoint = result.get("selected_endpoint", {})
+        # Get selected_endpoint, handle None case
+        selected_endpoint = result.get("selected_endpoint")
+        if selected_endpoint is None:
+            # Fallback: use first candidate if available
+            selected_endpoints = result.get("selected_endpoints", [])
+            selected_endpoint = selected_endpoints[0] if selected_endpoints else {}
         
-        # Get path directly from selected_endpoint (it should already have it from TEST_ENDPOINTS)
-        # Fallback to lookup if not found
+        # Ensure selected_endpoint is a dict
+        if not isinstance(selected_endpoint, dict):
+            selected_endpoint = {}
+        
+        # Get endpoint ID and path
+        endpoint_id = selected_endpoint.get("id", "UNKNOWN")
         endpoint_path = selected_endpoint.get("path", "UNKNOWN")
-        
-        if endpoint_path == "UNKNOWN" and endpoint_id != "UNKNOWN":
-            # Fallback lookup if path wasn't in selected_endpoint
-            for endpoint in TEST_ENDPOINTS:
-                if endpoint.get("id") == endpoint_id:
-                    endpoint_path = endpoint.get("path", "UNKNOWN")
-                    break
         
         # Extract relevant outputs
         return {
             "endpoint_name": endpoint_id,
-            "endpoint_path": endpoint_path,  # Add path for comparison
-            "endpoint_keywords": result.get("selected_endpoint", {}).get("keywords", []),
+            "endpoint_path": endpoint_path,
+            "endpoint_keywords": selected_endpoint.get("keywords", []),
             "extracted_params": result.get("extracted_params", {}),
             "intent": result.get("intent", "GET"),
             "domain": result.get("domain", "general"),
@@ -693,6 +702,8 @@ async def run_test_case_async(
         }
     except Exception as e:
         print(f"❌ Error running test case: {e}")
+        import traceback
+        traceback.print_exc()
         return {
             "endpoint_name": "ERROR",
             "endpoint_path": "ERROR",
