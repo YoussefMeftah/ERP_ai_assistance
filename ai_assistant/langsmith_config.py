@@ -292,8 +292,8 @@ class BatchEvaluationRunner:
                 # Evaluate
                 eval_result = {
                     "example_id": example.get("id"),
-                    "input": example.get("inputs"),
-                    "expected": example.get("outputs"),
+                    "input": example.get("input"),
+                    "expected": example.get("expected_output"),
                     "prediction": pred,
                     "scores": {},
                     "success": True,
@@ -302,11 +302,44 @@ class BatchEvaluationRunner:
                 # Run evaluators
                 for evaluator in evaluators:
                     try:
+                        # Get expected output for comparison
+                        expected = example.get("expected_output", {})
+                        
+                        # Extract the specific field for comparison based on evaluator type
+                        evaluator_name = evaluator.__class__.__name__
+                        
+                        if "Endpoint" in evaluator_name:
+                            # EndpointExactMatchEvaluator: compare endpoint names
+                            pred_value = str(pred.get("endpoint_name", ""))
+                            expected_value = str(expected.get("endpoint", ""))
+                        elif "Parameter" in evaluator_name:
+                            # ParameterExtractionEvaluator: compare extracted_params
+                            pred_value = json.dumps(pred.get("extracted_params", {}), ensure_ascii=False)
+                            expected_value = json.dumps(expected.get("extracted_params", {}), ensure_ascii=False)
+                        elif "Intent" in evaluator_name:
+                            # IntentClassificationEvaluator: compare intent
+                            pred_value = str(pred.get("intent", ""))
+                            expected_value = str(expected.get("intent", ""))
+                        elif "Domain" in evaluator_name:
+                            # DomainClassificationEvaluator: compare domain
+                            pred_value = str(pred.get("domain", ""))
+                            expected_value = str(expected.get("domain", ""))
+                        else:
+                            continue
+                        
                         score_result = evaluator._evaluate_strings(
-                            str(pred),
-                            str(example.get("outputs"))
+                            pred_value,
+                            expected_value
                         )
-                        eval_result["scores"].update(score_result)
+                        # Extract metric name and score value from evaluator result
+                        metric_name = score_result.get("key", "unknown")
+                        score_value = score_result.get("score", 0.0)
+                        # Ensure score is numeric
+                        try:
+                            score_value = float(score_value)
+                        except (ValueError, TypeError):
+                            score_value = 0.0
+                        eval_result["scores"][metric_name] = score_value
                     except Exception as e:
                         if self.config.verbose:
                             print(f"  ⚠️  Evaluator {evaluator.__class__.__name__} failed: {e}")
