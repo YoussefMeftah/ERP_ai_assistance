@@ -116,16 +116,19 @@ def load_test_endpoints_from_api_test() -> List[Dict[str, Any]]:
                         if param.get("required", False) or param.get("in") == "path":
                             required_params.append(param_name)
                 
-                # Create endpoint definition
+                # Create endpoint definition with all required fields
                 endpoint = {
                     "id": f"webapi_{method.lower()}_{path.lower().replace('/', '_').replace('-', '_')}",
                     "path": path,
+                    "url": path,  # Add url field for compatibility with endpoint_scoring
                     "method": method.upper(),
                     "tags": [tag],
                     "description": operation.get("summary", operation.get("description", "")),
                     "parameters": param_details,
                     "required_parameters": required_params,
-                    "keywords": [tag.lower()]
+                    "keywords": [tag.lower()],
+                    "role": tag.lower() if tag and tag.lower() != "general" else "commercial",  # Infer role from tag
+                    "intent": method.upper()  # Default intent based on method
                 }
                 
                 endpoints.append(endpoint)
