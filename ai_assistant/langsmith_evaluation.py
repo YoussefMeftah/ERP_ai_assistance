@@ -33,6 +33,7 @@ import argparse
 from typing import Any, Dict, List, Optional, Tuple
 from datetime import datetime
 from pathlib import Path
+from pydantic import ConfigDict
 
 from langsmith import Client, traceable
 from langsmith.evaluation import StringEvaluator, RunEvaluator
@@ -123,6 +124,14 @@ class EndpointExactMatchEvaluator(StringEvaluator):
     This is a strict evaluator: either the endpoint matches (1.0) or it doesn't (0.0).
     """
     
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+    
+    def __init__(self, **kwargs):
+        """Initialize with default grading function."""
+        if 'grading_function' not in kwargs:
+            kwargs['grading_function'] = self.evaluate_strings
+        super().__init__(**kwargs)
+    
     def evaluate_strings(
         self,
         prediction: str,
@@ -185,6 +194,14 @@ class ParameterExtractionEvaluator(StringEvaluator):
     - Missing keys: -0.5 point per missing key
     - Extra keys: -0.25 point per extra key (slightly penalized)
     """
+    
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+    
+    def __init__(self, **kwargs):
+        """Initialize with default grading function."""
+        if 'grading_function' not in kwargs:
+            kwargs['grading_function'] = self.evaluate_strings
+        super().__init__(**kwargs)
     
     def evaluate_strings(
         self,
@@ -301,6 +318,14 @@ class IntentClassificationEvaluator(StringEvaluator):
     Evaluates if the classified intent (GET, AGGREGATE, FILTER) is correct.
     """
     
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+    
+    def __init__(self, **kwargs):
+        """Initialize with default grading function."""
+        if 'grading_function' not in kwargs:
+            kwargs['grading_function'] = self.evaluate_strings
+        super().__init__(**kwargs)
+    
     def evaluate_strings(
         self,
         prediction: str,
@@ -339,6 +364,14 @@ class DomainClassificationEvaluator(StringEvaluator):
     """
     Evaluates if the classified domain is correct.
     """
+    
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+    
+    def __init__(self, **kwargs):
+        """Initialize with default grading function."""
+        if 'grading_function' not in kwargs:
+            kwargs['grading_function'] = self.evaluate_strings
+        super().__init__(**kwargs)
     
     def evaluate_strings(
         self,
