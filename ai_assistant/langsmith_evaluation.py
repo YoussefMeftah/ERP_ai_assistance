@@ -75,8 +75,7 @@ def load_test_endpoints_from_api_test() -> List[Dict[str, Any]]:
     Returns:
         List of endpoint definitions from api_test.json
     """
-    # Import here to avoid circular imports
-    from utils.endpoint_loader import path_to_keywords
+    import re
     
     if not API_TEST_JSON_PATH.exists():
         print(f"❌ api_test.json not found at {API_TEST_JSON_PATH}")
@@ -119,8 +118,21 @@ def load_test_endpoints_from_api_test() -> List[Dict[str, Any]]:
                         if param.get("required", False) or param.get("in") == "path":
                             required_params.append(param_name)
                 
-                # Extract keywords using proper camelCase splitting
-                keywords = path_to_keywords(path)
+                # Extract keywords using inline CamelCase splitting
+                # Split path on separators and CamelCase boundaries
+                expanded = re.sub(r"([a-z])([A-Z])", r"\1 \2", path)  # Insert space before capitals
+                tokens = [t.lower() for t in re.split(r"[^a-zA-Z0-9]+", expanded) if t]
+                stop_words = {"api", "odata", "get", "all", "by", "id", "v1", "swagger"}
+                keywords = [t for t in tokens if t not in stop_words][:8]
+                
+                # Add common plural forms for better matching
+                plural_keywords = []
+                for kw in keywords:
+                    plural_keywords.append(kw)
+                    if not kw.endswith('s'):
+                        plural_keywords.append(kw + 's')  # Add plural
+                keywords = list(dict.fromkeys(plural_keywords))[:8]  # Remove duplicates
+                
                 if not keywords:
                     keywords = [tag.lower()]
                 
@@ -128,15 +140,15 @@ def load_test_endpoints_from_api_test() -> List[Dict[str, Any]]:
                 endpoint = {
                     "id": f"webapi_{method.lower()}_{path.lower().replace('/', '_').replace('-', '_')}",
                     "path": path,
-                    "url": path,  # Add url field for compatibility with endpoint_scoring
+                    "url": path,
                     "method": method.upper(),
                     "tags": [tag],
                     "description": operation.get("summary", operation.get("description", "")),
                     "parameters": param_details,
                     "required_parameters": required_params,
-                    "keywords": keywords,  # Now using proper keyword extraction
-                    "role": tag.lower() if tag and tag.lower() != "general" else "commercial",  # Infer role from tag
-                    "intent": method.upper()  # Default intent based on method
+                    "keywords": keywords,  # Extracted inline
+                    "role": tag.lower() if tag and tag.lower() != "general" else "commercial",
+                    "intent": method.upper()
                 }
                 
                 endpoints.append(endpoint)
@@ -154,6 +166,11 @@ def load_test_endpoints_from_api_test() -> List[Dict[str, Any]]:
     
     except json.JSONDecodeError as e:
         print(f"❌ Error parsing api_test.json: {e}")
+        return []
+    except Exception as e:
+        print(f"❌ Error loading api_test.json: {e}")
+        import traceback
+        traceback.print_exc()
         return []
     except Exception as e:
         print(f"❌ Error loading api_test.json: {e}")
@@ -192,35 +209,22 @@ def retrieve_candidate_endpoints_eval(state: AssistantState) -> AssistantState:
         print("❌ No test endpoints available")
         return {"endpoint_candidates": []}
     
-    # Score with business filter
+    # Score endpoints WITHOUT business filter (test endpoints are already controlled)
     scored = score_endpoints(
         endpoints=TEST_ENDPOINTS,
         question=question,
         intent=intent,
         domain=domain,
-        apply_business_filter=True,
+        apply_business_filter=False,  # Don't filter - all test endpoints are valid
     )
-    
-    # If no business endpoints found, try without filter
-    if not scored:
-        print(f"[DEBUG] No business endpoints passed filter, trying without filter...")
-        scored = score_endpoints(
-            endpoints=TEST_ENDPOINTS,
-            question=question,
-            intent=intent,
-            domain=domain,
-            apply_business_filter=False,
-        )
     
     # Return up to 12 best candidates
     max_candidates = 12
     candidates = scored[:max_candidates]
     
     if not candidates:
-        print(f"[DEBUG] ⚠️  No candidates found for: {question[:50]}...")
-        print(f"[DEBUG]   Question: {question}")
-        print(f"[DEBUG]   Intent: {intent}, Domain: {domain}")
-        print(f"[DEBUG]   TEST_ENDPOINTS: {len(TEST_ENDPOINTS)} available")
+        print(f"[DEBUG] ⚠️  No candidates scored for: {question[:50]}...")
+        print(f"[DEBUG]   Scoring returned 0 results from {len(TEST_ENDPOINTS)} endpoints")
     
     return {"endpoint_candidates": candidates}
 

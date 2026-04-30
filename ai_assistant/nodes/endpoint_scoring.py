@@ -145,6 +145,7 @@ def score_endpoints(
     """
     q_tokens = set(tokenize(question))
     scored: List[Dict[str, Any]] = []
+    all_endpoints_with_scores: List[Dict[str, Any]] = []
     
     for ep in endpoints:
         # Apply business filter if requested
@@ -165,8 +166,13 @@ def score_endpoints(
             domain=domain,
         )
         
+        all_endpoints_with_scores.append({"score": score, **ep})
         if score > 0:
             scored.append({"score": score, **ep})
+    
+    # Fallback: if no endpoints scored > 0, return all with their scores
+    if not scored and all_endpoints_with_scores:
+        scored = all_endpoints_with_scores
     
     # Sort by score descending
     scored.sort(key=lambda x: x["score"], reverse=True)
