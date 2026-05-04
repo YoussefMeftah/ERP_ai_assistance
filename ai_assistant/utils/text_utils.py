@@ -229,3 +229,124 @@ def extract_simple_params(question: str) -> Dict[str, Any]:
         out["commercialCategory"] = 1
     
     return out
+
+
+def extract_params_for_endpoint(
+    question: str,
+    endpoint: Dict[str, Any]
+) -> Dict[str, Any]:
+    """Extract parameters from question based on endpoint's expected parameters.
+    
+    Enhanced version of extract_simple_params that understands endpoint-specific
+    parameter names and types.
+    
+    Args:
+        question: User question text
+        endpoint: Endpoint dict with parameterMetadata containing required/optional params
+    
+    Returns:
+        Dict of parameter names to extracted values
+    """
+    out: Dict[str, Any] = {}
+    q = question.lower()
+    
+    # Get endpoint's parameter metadata
+    param_metadata = endpoint.get("parameterMetadata", {})
+    required_params = param_metadata.get("required", [])
+    optional_params = param_metadata.get("optional", [])
+    detailed_params = param_metadata.get("detailed", {})
+    
+    all_param_names = required_params + optional_params
+    
+    # Process each expected parameter
+    for param_name in all_param_names:
+        param_detail = detailed_params.get(param_name, {})
+        param_type = param_detail.get("type", "string").lower()
+        
+        extracted_value = None
+        
+        # Handle date parameters
+        if param_type in ["date", "datetime"] or "date" in param_name.lower():
+            # Check for year ranges first
+            year_pattern = r"\b(20\d{2})\b"
+            year_matches = re.findall(year_pattern, question)
+            
+            if year_matches:
+                years = sorted(set(int(y) for y in year_matches))
+                if years:
+                    if "debut" in param_name.lower() or "start" in param_name.lower():
+                        extracted_value = f"01-01-{years[0]}"
+                    elif "fin" in param_name.lower() or "end" in param_name.lower():
+                        extracted_value = f"12-31-{years[-1]}"
+            
+            # If no year found, try explicit dates
+            if not extracted_value:
+                date_patterns = [
+                    r"\b(20\d{2}-\d{2}-\d{2})\b",
+                    r"\b(\d{2}-\d{2}-20\d{2})\b",
+                ]
+                for pattern in date_patterns:
+                    matches = re.findall(pattern, question)
+                    if matches:
+                        try:
+                            if matches[0].startswith("20"):
+                                d = datetime.strptime(matches[0], "%Y-%m-%d")
+                            else:
+                                try:
+                                    d = datetime.strptime(matches[0], "%m-%d-%Y")
+                                except ValueError:
+                                    d = datetime.strptime(matches[0], "%d-%m-%Y")
+                            extracted_value = d.strftime("%m-%d-%Y")
+                            break
+                        except ValueError:
+                            extracted_value = matches[0]
+                            break
+            
+            # Default date: current year
+            if not extracted_value:
+                today = datetime.now(UTC)
+                if "debut" in param_name.lower() or "start" in param_name.lower():
+                    extracted_value = today.replace(month=1, day=1).strftime("%m-%d-%Y")
+                elif "fin" in param_name.lower() or "end" in param_name.lower():
+                    extracted_value = today.replace(month=12, day=31).strftime("%m-%d-%Y")
+        
+        # Handle numeric/ID parameters
+        elif param_type in ["integer", "number", "int", "double", "float"]:
+            # Look for pattern like "param_name number"
+            id_patterns = [
+                rf"\b{param_name}\s*(\d+)\b",
+                rf"\b({param_name.split('_')[0]})\s*(\d+)\b",  # Try first part of camelCase
+                r"\b(?:id|number|num|code|client|product|article)\s*(\d+)\b",
+            ]
+            
+            for pattern in id_patterns:
+                match = re.search(pattern, q, re.IGNORECASE)
+                if match:
+                    extracted_value = int(match.group(1) if match.lastindex == 1 else match.group(2))
+                    break
+        
+        # Handle string parameters
+        elif param_type == "string":
+            # Look for quoted strings or specific keywords
+            quoted = re.findall(r'"([^"]+)"|\'([^\']+)\'', question)
+            if quoted:
+                extracted_value = quoted[0][0] or quoted[0][1]
+            
+            # Or look for common keywords in question
+            if not extracted_value:
+                keywords = ["category", "type", "name", "status", "code"]
+                for kw in keywords:
+                    if kw in param_name.lower():
+                        # Try to find a relevant value
+                        pattern = rf"\b{kw}\s+(\w+)\b"
+                        match = re.search(pattern, q, re.IGNORECASE)
+                        if match:
+                            extracted_value = match.group(1)
+                            break
+        
+        # Add extracted value if found
+        if extracted_value is not None:
+            out[param_name] = extracted_value
+            print(f"[DEBUG] Endpoint-aware extraction: {param_name} = {extracted_value}")
+    
+    return out

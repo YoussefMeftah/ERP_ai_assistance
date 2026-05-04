@@ -5,7 +5,7 @@ import json
 from state import AssistantState
 from config import config
 from utils.api_client import call_ollama_json
-from utils.text_utils import extract_simple_params
+from utils.text_utils import extract_simple_params, extract_params_for_endpoint
 
 
 def build_router_candidates_payload(
@@ -415,6 +415,20 @@ def select_endpoint_and_params(state: AssistantState) -> AssistantState:
         params.update(llm_params)
     
     selected = selected_endpoints[0] if selected_endpoints else fallback_selected
+    
+    # Endpoint-aware parameter extraction: refine based on selected endpoint's parameters
+    if selected and isinstance(selected, dict):
+        try:
+            endpoint_specific_params = extract_params_for_endpoint(
+                state.get("question", ""),
+                selected
+            )
+            if endpoint_specific_params:
+                # Merge endpoint-specific params, prioritizing endpoint-aware extraction
+                params.update(endpoint_specific_params)
+                print(f"[DEBUG] Endpoint-aware extraction merged: {endpoint_specific_params}")
+        except Exception as e:
+            print(f"[DEBUG] Endpoint-aware extraction failed: {e}")
     
     # Debug: log if selected is None
     if selected is None:

@@ -9,6 +9,7 @@ from .text_utils import (
     infer_domain_from_question,
     infer_domain_from_path,
     extract_simple_params,
+    extract_params_for_endpoint,
     contains_any,
 )
 from .endpoint_loader import (
@@ -29,6 +30,7 @@ __all__ = [
     "infer_domain_from_question",
     "infer_domain_from_path",
     "extract_simple_params",
+    "extract_params_for_endpoint",
     "contains_any",
     "load_endpoints",
     "load_endpoint_overrides",
