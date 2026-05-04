@@ -118,6 +118,136 @@ def determine_endpoint_limit(question: str, intent: str) -> int:
     return 1
 
 
+def build_parameter_name_mapping(expected_param_names: set) -> Dict[str, str]:
+    """Build a comprehensive mapping of parameter name variations to canonical names.
+    
+    Maps common variations (camelCase, snake_case, different translations) to
+    the expected parameter names from endpoints.
+    
+    Args:
+        expected_param_names: Set of valid parameter names from endpoints
+    
+    Returns:
+        Dict mapping variations to canonical parameter names
+    """
+    mapping = {}
+    
+    # Define common parameter name patterns and their variations
+    common_patterns = {
+        "DateDebut": [
+            "dateDebut", "date_debut", "dateDebout", "date_start", "dateStart",
+            "startDate", "start_date", "dateFrom", "date_from", "depuis", "from_date"
+        ],
+        "DateFin": [
+            "dateFin", "date_fin", "dateFine", "date_end", "dateEnd", "endDate",
+            "end_date", "dateTo", "date_to", "jusqua", "until_date", "to_date"
+        ],
+        "ClientID": [
+            "clientid", "client_id", "clientId", "customerId", "customer_id",
+            "cid", "id", "client"
+        ],
+        "CommandeID": [
+            "commandeid", "commande_id", "commandeId", "orderId", "order_id",
+            "orderid", "oid"
+        ],
+        "ArticleID": [
+            "articleid", "article_id", "articleId", "productId", "product_id",
+            "pid", "sku"
+        ],
+        "EmployeID": [
+            "employeid", "employe_id", "employeId", "employeeid", "empId",
+            "emp_id", "staffId", "staff_id"
+        ],
+    }
+    
+    # Add exact and lowercase mappings for each expected parameter
+    for param in expected_param_names:
+        mapping[param] = param
+        mapping[param.lower()] = param
+    
+    # Add pattern-based mappings if expected parameter matches a pattern
+    for canonical, variations in common_patterns.items():
+        if canonical in expected_param_names:
+            for var in variations:
+                mapping[var] = canonical
+                mapping[var.lower()] = canonical
+    
+    return mapping
+
+
+def normalize_parameter_names_with_mapping(
+    extracted_params: Dict[str, Any],
+    expected_param_names: set
+) -> Dict[str, Any]:
+    """Normalize extracted parameter names using comprehensive mapping.
+    
+    Handles:
+    - CamelCase ↔ snake_case variations
+    - Singular ↔ Plural forms
+    - Different language translations
+    - Common abbreviations
+    
+    Args:
+        extracted_params: Parameters extracted by LLM or simple extraction
+        expected_param_names: Set of valid parameter names from endpoints
+    
+    Returns:
+        Normalized parameter dict with corrected names
+    """
+    if not extracted_params or not expected_param_names:
+        return extracted_params
+    
+    # Build comprehensive mapping
+    mapping = build_parameter_name_mapping(expected_param_names)
+    
+    normalized = {}
+    used_values = set()
+    
+    # Try to map each extracted parameter
+    for key, value in extracted_params.items():
+        if value is None:
+            continue
+        
+        # Try exact match first
+        if key in mapping:
+            canonical_name = mapping[key]
+            # Avoid duplicate values
+            if id(value) not in used_values:
+                normalized[canonical_name] = value
+                used_values.add(id(value))
+                if canonical_name != key:
+                    print(f"[DEBUG] Parameter mapping: {key} → {canonical_name}")
+                continue
+        
+        # Try lowercase match
+        key_lower = key.lower()
+        if key_lower in mapping:
+            canonical_name = mapping[key_lower]
+            if id(value) not in used_values:
+                normalized[canonical_name] = value
+                used_values.add(id(value))
+                print(f"[DEBUG] Parameter mapping: {key} → {canonical_name}")
+                continue
+        
+        # Try fuzzy matching for remaining params
+        # Check if it's similar to any expected parameter (case-insensitive)
+        for expected_name in expected_param_names:
+            if key.lower() == expected_name.lower():
+                if id(value) not in used_values:
+                    normalized[expected_name] = value
+                    used_values.add(id(value))
+                    print(f"[DEBUG] Parameter fuzzy match: {key} → {expected_name}")
+                    break
+        else:
+            # No match found - keep original if not already using this value
+            if id(value) not in used_values:
+                normalized[key] = value
+                used_values.add(id(value))
+                print(f"[DEBUG] Parameter no mapping found: {key} (kept as-is)")
+    
+    return normalized
+
+
 def normalize_parameter_names(
     extracted_params: Dict[str, Any],
     expected_param_names: set
@@ -133,49 +263,8 @@ def normalize_parameter_names(
     Returns:
         Normalized parameter dict with corrected names
     """
-    if not extracted_params or not expected_param_names:
-        return extracted_params
-    
-    normalized = {}
-    used_values = set()
-    
-    # Direct matches (keep as-is if already correct)
-    for key, value in extracted_params.items():
-        if key in expected_param_names:
-            normalized[key] = value
-            used_values.add(id(value))
-    
-    # Handle parameter name variations for remaining params
-    for key, value in extracted_params.items():
-        if key in expected_param_names:
-            continue  # Already added
-        
-        key_lower = key.lower()
-        
-        # Map common LLM variations to expected names
-        for expected_name in expected_param_names:
-            if key in normalized:
-                continue  # Already mapped
-            
-            expected_lower = expected_name.lower()
-            
-            # Check for common variations
-            variations = [
-                expected_lower,
-                expected_lower.replace("debut", "start").replace("fin", "end"),
-                expected_lower.replace("datedebut", "date_start"),
-                expected_lower.replace("datefin", "date_end"),
-            ]
-            
-            if key_lower in variations or key_lower == expected_lower:
-                # Check if this value hasn't been used yet
-                if id(value) not in used_values:
-                    normalized[expected_name] = value
-                    used_values.add(id(value))
-                    print(f"[DEBUG] Normalized parameter: {key} → {expected_name}")
-                    break
-    
-    return normalized
+    # Use the comprehensive mapping-based normalization
+    return normalize_parameter_names_with_mapping(extracted_params, expected_param_names)
 
 
 def select_best_endpoints_with_llm(
@@ -415,6 +504,23 @@ def select_endpoint_and_params(state: AssistantState) -> AssistantState:
         params.update(llm_params)
     
     selected = selected_endpoints[0] if selected_endpoints else fallback_selected
+    
+    # Apply parameter name mapping based on selected endpoint's requirements
+    if selected and isinstance(selected, dict):
+        try:
+            # Get expected parameter names from endpoint
+            param_metadata = selected.get("parameterMetadata", {})
+            required_params = param_metadata.get("required", [])
+            optional_params = param_metadata.get("optional", [])
+            expected_param_names = set(required_params + optional_params)
+            
+            if expected_param_names:
+                # Normalize all extracted parameters to match endpoint requirements
+                normalized_params = normalize_parameter_names(params, expected_param_names)
+                params = normalized_params
+                print(f"[DEBUG] Final normalized params: {json.dumps(params, ensure_ascii=False)}")
+        except Exception as e:
+            print(f"[DEBUG] Parameter name mapping failed: {e}")
     
     # Endpoint-aware parameter extraction: refine based on selected endpoint's parameters
     if selected and isinstance(selected, dict):
