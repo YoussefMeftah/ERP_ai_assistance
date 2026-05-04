@@ -118,6 +118,66 @@ def determine_endpoint_limit(question: str, intent: str) -> int:
     return 1
 
 
+def normalize_parameter_names(
+    extracted_params: Dict[str, Any],
+    expected_param_names: set
+) -> Dict[str, Any]:
+    """Normalize extracted parameter names to match expected endpoint parameter names.
+    
+    Handles common variations and naming mismatches from LLM extraction.
+    
+    Args:
+        extracted_params: Parameters extracted by LLM
+        expected_param_names: Set of valid parameter names from endpoints
+    
+    Returns:
+        Normalized parameter dict with corrected names
+    """
+    if not extracted_params or not expected_param_names:
+        return extracted_params
+    
+    normalized = {}
+    used_values = set()
+    
+    # Direct matches (keep as-is if already correct)
+    for key, value in extracted_params.items():
+        if key in expected_param_names:
+            normalized[key] = value
+            used_values.add(id(value))
+    
+    # Handle parameter name variations for remaining params
+    for key, value in extracted_params.items():
+        if key in expected_param_names:
+            continue  # Already added
+        
+        key_lower = key.lower()
+        
+        # Map common LLM variations to expected names
+        for expected_name in expected_param_names:
+            if key in normalized:
+                continue  # Already mapped
+            
+            expected_lower = expected_name.lower()
+            
+            # Check for common variations
+            variations = [
+                expected_lower,
+                expected_lower.replace("debut", "start").replace("fin", "end"),
+                expected_lower.replace("datedebut", "date_start"),
+                expected_lower.replace("datefin", "date_end"),
+            ]
+            
+            if key_lower in variations or key_lower == expected_lower:
+                # Check if this value hasn't been used yet
+                if id(value) not in used_values:
+                    normalized[expected_name] = value
+                    used_values.add(id(value))
+                    print(f"[DEBUG] Normalized parameter: {key} → {expected_name}")
+                    break
+    
+    return normalized
+
+
 def select_best_endpoints_with_llm(
     candidates: List[Dict[str, Any]],
     question: str,
@@ -197,17 +257,39 @@ def select_best_endpoints_with_llm(
                 param_reference += "\n"
         param_reference += "\n"
     
+    # Build list of all expected parameter names for clarity
+    all_param_names = set()
+    for candidate in compact_candidates:
+        required = candidate.get("parameters", {}).get("required", [])
+        for p in required:
+            all_param_names.add(p['name'])
+    
+    param_names_instruction = ""
+    if all_param_names:
+        param_names_list = ", ".join(sorted(all_param_names))
+        param_names_instruction = (
+            f"\nCRITICAL - Use EXACT parameter names (case-sensitive):\n"
+            f"Expected parameter names: {param_names_list}\n"
+            f"DO NOT rename, remap, or transform these parameter names:\n"
+            f"  ❌ WRONG: 'date_start' instead of 'DateDebut'\n"
+            f"  ❌ WRONG: 'id' instead of 'ClientID'\n"
+            f"  ❌ WRONG: 'startDate' instead of 'DateDebut'\n"
+            f"  ✅ CORRECT: Use names EXACTLY as shown above\n"
+        )
+    
     user_prompt = (
         f"Question: {question}\n"
         f"Intent: {intent}\n\n"
         f"{param_reference}\n"
+        f"{param_names_instruction}\n"
         f"Available Endpoints: {json.dumps(compact_candidates, ensure_ascii=False)}\n\n"
         "Task:\n"
         "1. Analyze the question and intent\n"
         "2. Examine the endpoint parameter requirements above\n"
         "3. Select the endpoint(s) that best match the question\n"
         "4. Extract ALL required parameters from the question using the reference above\n"
-        "5. Return the JSON response with endpoint_ids and extracted_params"
+        "5. Return the JSON response with endpoint_ids and extracted_params\n"
+        "6. IMPORTANT: Return parameter names EXACTLY as they appear in the ENDPOINT PARAMETER DETAILS section"
     )
     
     try:
@@ -230,9 +312,11 @@ def select_best_endpoints_with_llm(
         
         llm_params = llm_choice.get("extracted_params", {})
         if isinstance(llm_params, dict):
-            extracted_params.update(llm_params)
-            if llm_params:
-                print(f"[DEBUG] Extracted Parameters: {json.dumps(llm_params, ensure_ascii=False)}")
+            # Normalize parameter names to match endpoint requirements
+            normalized_llm_params = normalize_parameter_names(llm_params, all_param_names)
+            extracted_params.update(normalized_llm_params)
+            if normalized_llm_params:
+                print(f"[DEBUG] Normalized Parameters: {json.dumps(normalized_llm_params, ensure_ascii=False)}")
         
         # Try endpoint_ids array first
         endpoint_ids = llm_choice.get("endpoint_ids")
