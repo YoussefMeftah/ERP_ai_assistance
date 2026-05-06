@@ -134,11 +134,11 @@ def infer_domain_from_path(path: str) -> str:
     return "general"
 
 
-def extract_simple_params(question: str) -> Dict[str, Any]:
+def extract_simple_params(question: str, add_defaults: bool = True) -> Dict[str, Any]:
     """Extract basic parameters from user question.
     
     Extracts: IDs, dates (various formats, year ranges)
-    Sets defaults for: DateDebut, DateFin, commercialCategory
+    Optionally sets defaults for: DateDebut, DateFin, commercialCategory
     
     Year range examples:
         - "dans 2025" → "01-01-2025" to "12-31-2025"
@@ -147,6 +147,7 @@ def extract_simple_params(question: str) -> Dict[str, Any]:
     
     Args:
         question: User question text
+        add_defaults: Whether to add default DateDebut, DateFin, commercialCategory
     
     Returns:
         Dict of parameter names to values
@@ -213,20 +214,34 @@ def extract_simple_params(question: str) -> Dict[str, Any]:
             elif len(converted_dates) == 1:
                 out["DateFin"] = converted_dates[0]
     
-    # Set default dates if not provided
-    if "DateDebut" not in out or "DateFin" not in out:
-        today = datetime.now(UTC)
-        year_start = today.replace(month=1, day=1)
-        year_end = today.replace(month=12, day=31)
+    # Set default dates if not provided (and add_defaults=True)
+    if add_defaults:
+        if "DateDebut" not in out or "DateFin" not in out:
+            today = datetime.now(UTC)
+            year_start = today.replace(month=1, day=1)
+            year_end = today.replace(month=12, day=31)
+            
+            if "DateDebut" not in out:
+                out["DateDebut"] = year_start.strftime("%m-%d-%Y")
+            if "DateFin" not in out:
+                out["DateFin"] = year_end.strftime("%m-%d-%Y")
         
-        if "DateDebut" not in out:
-            out["DateDebut"] = year_start.strftime("%m-%d-%Y")
-        if "DateFin" not in out:
-            out["DateFin"] = year_end.strftime("%m-%d-%Y")
+        # Default commercial category
+        if "commercialCategory" not in out:
+            out["commercialCategory"] = 1
     
-    # Default commercial category
-    if "commercialCategory" not in out:
-        out["commercialCategory"] = 1
+    # Extract IsFrs (supplier vs customer indicator)
+    q_lower = question.lower()
+    # Check for supplier-specific keywords
+    supplier_keywords = ["fournisseur", "supplier", "vendor", "achat", "purchase"]
+    customer_keywords = ["client", "customer", "vente", "sale", "payment", "paiement"]
+    
+    # Default to False (customer-focused query) unless supplier keywords are present
+    if "IsFrs" not in out:
+        if any(word in q_lower for word in supplier_keywords):
+            out["IsFrs"] = True
+        else:
+            out["IsFrs"] = False
     
     return out
 

@@ -2,6 +2,7 @@
 
 from typing import Optional, Dict, Any, List
 import json
+from datetime import datetime, UTC
 from state import AssistantState
 from config import config
 from utils.api_client import call_ollama_json
@@ -159,6 +160,27 @@ def build_parameter_name_mapping(expected_param_names: set) -> Dict[str, str]:
         "EmployeID": [
             "employeid", "employe_id", "employeId", "employeeid", "empId",
             "emp_id", "staffId", "staff_id"
+        ],
+        # NEW: French abbreviation mappings (critical for test cases 31-45)
+        "cod_dep": [
+            "depotcode", "depot_code", "warehouseid", "warehouse_id", "cod_dep",
+            "code_depot", "depot", "warehouse"
+        ],
+        "cod_art": [
+            "articlecode", "article_code", "articleid", "article_id", "cod_art",
+            "code_article", "article", "product"
+        ],
+        "cod_clt": [
+            "clientcode", "client_code", "clientid", "client_id", "cod_clt",
+            "code_client", "customer_code", "customerid"
+        ],
+        "num_bl_clt": [
+            "num_bl_clt", "num_bl", "bl_number", "order_number", "orderid",
+            "order_id", "bl_clt", "client_order"
+        ],
+        "IsFrs": [
+            "isfrs", "is_frs", "isfournisseur", "is_fournisseur", "issupplier",
+            "is_supplier", "supplier", "fournisseur"
         ],
     }
     
@@ -473,8 +495,8 @@ def select_endpoint_and_params(state: AssistantState) -> AssistantState:
     candidates = state.get("endpoint_candidates", [])
     errors = state.get("errors", []).copy()
     
-    # Extract parameters from question
-    params = extract_simple_params(state.get("question", ""))
+    # Extract parameters from question (don't add defaults yet)
+    params = extract_simple_params(state.get("question", ""), add_defaults=False)
     
     # Fallback: highest-scored endpoint
     fallback_selected = candidates[0] if candidates else None
@@ -523,6 +545,29 @@ def select_endpoint_and_params(state: AssistantState) -> AssistantState:
                 print(f"[DEBUG] Final normalized params: {json.dumps(params, ensure_ascii=False)}")
         except Exception as e:
             print(f"[DEBUG] Parameter name mapping failed: {e}")
+    
+    # CRITICAL FIX: Only add defaults if endpoint actually requires them
+    if selected and isinstance(selected, dict):
+        param_metadata = selected.get("parameterMetadata", {})
+        required_params = set(param_metadata.get("required", []))
+        optional_params = set(param_metadata.get("optional", []))
+        all_endpoint_params = required_params | optional_params
+        
+        # Only add DateDebut/DateFin if endpoint requires or accepts them
+        if any(p in all_endpoint_params for p in ["DateDebut", "DateFin", "date_debut", "date_fin"]):
+            if "DateDebut" not in params or "DateFin" not in params:
+                today = datetime.now(UTC)
+                year_start = today.replace(month=1, day=1)
+                year_end = today.replace(month=12, day=31)
+                if "DateDebut" not in params:
+                    params["DateDebut"] = year_start.strftime("%m-%d-%Y")
+                if "DateFin" not in params:
+                    params["DateFin"] = year_end.strftime("%m-%d-%Y")
+        
+        # Only add commercialCategory if endpoint requires or accepts it
+        if any(p in all_endpoint_params for p in ["commercialCategory", "commercial_category"]):
+            if "commercialCategory" not in params:
+                params["commercialCategory"] = 1
     
     # Endpoint-aware parameter extraction: refine based on selected endpoint's parameters
     if selected and isinstance(selected, dict):
