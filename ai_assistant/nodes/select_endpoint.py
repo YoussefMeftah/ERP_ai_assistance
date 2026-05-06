@@ -136,11 +136,13 @@ def build_parameter_name_mapping(expected_param_names: set) -> Dict[str, str]:
     common_patterns = {
         "DateDebut": [
             "dateDebut", "date_debut", "dateDebout", "date_start", "dateStart",
-            "startDate", "start_date", "dateFrom", "date_from", "depuis", "from_date"
+            "startDate", "start_date", "dateFrom", "date_from", "depuis", "from_date",
+            "date", "start_date", "debut", "beginning", "from", "start"  # NEW: common LLM outputs
         ],
         "DateFin": [
             "dateFin", "date_fin", "dateFine", "date_end", "dateEnd", "endDate",
-            "end_date", "dateTo", "date_to", "jusqua", "until_date", "to_date"
+            "end_date", "dateTo", "date_to", "jusqua", "until_date", "to_date",
+            "end", "end_date", "fin", "until", "to"  # NEW: common LLM outputs
         ],
         "ClientID": [
             "clientid", "client_id", "clientId", "customerId", "customer_id",
