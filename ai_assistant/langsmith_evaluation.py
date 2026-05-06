@@ -424,6 +424,11 @@ class ParameterExtractionEvaluator(StringEvaluator):
             if not isinstance(ref_params, dict):
                 ref_params = {}
             
+            # DEBUG: Show extracted vs expected parameters
+            print(f"\n[PARAM DEBUG] ════════════════════════════════════════")
+            print(f"[PARAM DEBUG] EXTRACTED:  {pred_params}")
+            print(f"[PARAM DEBUG] EXPECTED:   {ref_params}")
+            
             # Normalize keys to lowercase
             pred_keys_lower = {k.lower(): (k, v) for k, v in pred_params.items()}
             ref_keys_lower = {k.lower(): (k, v) for k, v in ref_params.items()}
@@ -444,19 +449,29 @@ class ParameterExtractionEvaluator(StringEvaluator):
                     if self._values_match(predicted_value, expected_value):
                         value_matches += 1
                         score += 1.0
+                        print(f"[PARAM DEBUG]   ✅ KEY MATCH: {orig_key} = {predicted_value} (expected: {expected_value})")
                     else:
                         # Partial credit for key match
                         score += 0.5
+                        print(f"[PARAM DEBUG]   ⚠️  KEY FOUND but VALUE MISMATCH: {orig_key}")
+                        print(f"[PARAM DEBUG]      Got: {predicted_value}")
+                        print(f"[PARAM DEBUG]      Exp: {expected_value}")
                 else:
                     # Missing expected key
                     score -= 0.5
+                    print(f"[PARAM DEBUG]   ❌ MISSING KEY: {orig_key} (expected value: {expected_value})")
             
             # Penalize extra keys
             extra_keys = set(pred_keys_lower.keys()) - set(ref_keys_lower.keys())
+            if extra_keys:
+                print(f"[PARAM DEBUG]   ⚠️  EXTRA KEYS: {extra_keys}")
             score -= len(extra_keys) * 0.25
             
             # Normalize score to [0, 1]
             normalized_score = max(0.0, min(1.0, score / max_score))
+            
+            print(f"[PARAM DEBUG]   SCORE: {normalized_score:.3f} (matched: {len(matching_keys)}/{len(ref_keys_lower)})")
+            print(f"[PARAM DEBUG] ════════════════════════════════════════\n")
             
             return {
                 "key": "parameter_extraction_match",
@@ -686,6 +701,8 @@ async def run_test_case_async(
         Result dict with extracted endpoint and parameters
     """
     try:
+        print(f"\n[TEST] Processing: {question[:80]}")
+        
         # Use ainvoke for async execution
         result = await graph_app.ainvoke(
             {
@@ -708,13 +725,18 @@ async def run_test_case_async(
         # Get endpoint ID and path
         endpoint_id = selected_endpoint.get("id", "UNKNOWN")
         endpoint_path = selected_endpoint.get("path", "UNKNOWN")
+        extracted_params = result.get("extracted_params", {})
+        
+        # DEBUG: Show extracted parameters before evaluation
+        print(f"[TEST]   → Extracted Params: {extracted_params}")
+        print(f"[TEST]   → Endpoint: {endpoint_id} ({endpoint_path})")
         
         # Extract relevant outputs
         return {
             "endpoint_name": endpoint_id,
             "endpoint_path": endpoint_path,
             "endpoint_keywords": selected_endpoint.get("keywords", []),
-            "extracted_params": result.get("extracted_params", {}),
+            "extracted_params": extracted_params,
             "intent": result.get("intent", "GET"),
             "domain": result.get("domain", "general"),
             "success": True,
@@ -825,14 +847,20 @@ async def run_evaluation():
         
         print(f"\n✅ Inference complete: {len(results)} results")
         
-        # Print sample results
-        print(f"\n📊 Sample results:")
-        for i, result in enumerate(results[:3], 1):
-            print(f"\n  Test {i}:")
-            print(f"    - Endpoint: {result.get('endpoint_name')}")
-            print(f"    - Intent: {result.get('intent')}")
-            print(f"    - Domain: {result.get('domain')}")
-            print(f"    - Params: {result.get('extracted_params')}")
+        # Print detailed sample results with expected parameters
+        print(f"\n📊 Sample results (first 5 test cases):")
+        examples = list(client.list_examples(dataset_id=dataset.id))
+        for i, (result, example) in enumerate(zip(results[:5], examples[:5]), 1):
+            expected = example.outputs or {}
+            expected_params = expected.get("extracted_params", {})
+            
+            print(f"\n  Test {i}: {example.inputs.get('question', '')[:60]}...")
+            print(f"    Expected Params: {expected_params}")
+            print(f"    Extracted Params: {result.get('extracted_params', {})}")
+            if expected_params != result.get('extracted_params', {}):
+                print(f"    ❌ MISMATCH")
+            else:
+                print(f"    ✅ MATCH")
         
     except Exception as e:
         print(f"❌ Evaluation failed: {e}")
