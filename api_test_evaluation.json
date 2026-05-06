@@ -6,8 +6,8 @@
       "expected": {
         "endpoint": "/api/StatsVente/StatsVente",
         "extracted_params": {
-          "DateDebut": "2024-01-01",
-          "DateFin": "2024-12-31"
+          "DateDebut": "01-01-2024",
+          "DateFin": "12-31-2024"
         },
         "intent": "AGGREGATE",
         "domain": "commercial"
@@ -18,8 +18,8 @@
       "expected": {
         "endpoint": "/api/StatsVente/StatsVente",
         "extracted_params": {
-          "DateDebut": "2024-01-01",
-          "DateFin": "2024-12-31"
+          "DateDebut": "01-01-2024",
+          "DateFin": "12-31-2024"
         },
         "intent": "AGGREGATE",
         "domain": "commercial"
@@ -30,8 +30,8 @@
       "expected": {
         "endpoint": "/api/StatsVente/StatsVente",
         "extracted_params": {
-          "DateDebut": "2024-01-01",
-          "DateFin": "2024-12-31"
+          "DateDebut": "01-01-2024",
+          "DateFin": "12-31-2024"
         },
         "intent": "AGGREGATE",
         "domain": "commercial"
@@ -42,8 +42,8 @@
       "expected": {
         "endpoint": "/api/StatsVente/StatsVente",
         "extracted_params": {
-          "DateDebut": "2024-01-01",
-          "DateFin": "2024-12-31"
+          "DateDebut": "01-01-2024",
+          "DateFin": "12-31-2024"
         },
         "intent": "AGGREGATE",
         "domain": "commercial"
@@ -54,8 +54,8 @@
       "expected": {
         "endpoint": "/api/StatsVente/StatsVente",
         "extracted_params": {
-          "DateDebut": "2024-01-01",
-          "DateFin": "2024-12-31"
+          "DateDebut": "01-01-2024",
+          "DateFin": "12-31-2024"
         },
         "intent": "AGGREGATE",
         "domain": "commercial"
